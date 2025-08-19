@@ -1,0 +1,149 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // User's financial data subcollections
+      match /investments/{investmentId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /income/{incomeId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /expenses/{expenseId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /loans/{loanId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /goals/{goalId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /snapshots/{snapshotId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Helper functions for validation
+    function isValidUser() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function hasValidTimestamps() {
+      return request.resource.data.keys().hasAll(['createdAt', 'updatedAt']) &&
+             request.resource.data.createdAt is timestamp &&
+             request.resource.data.updatedAt is timestamp;
+    }
+    
+    function hasValidUserId() {
+      return request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Additional validation rules for specific document types
+    function isValidInvestment() {
+      return request.resource.data.keys().hasAll(['userId', 'type', 'name', 'quantity', 'purchasePrice', 'purchaseDate']) &&
+             request.resource.data.quantity > 0 &&
+             request.resource.data.purchasePrice > 0 &&
+             request.resource.data.type in ['stocks', 'bonds', 'mutual_funds', 'real_estate', 'crypto', 'other'];
+    }
+    
+    function isValidIncome() {
+      return request.resource.data.keys().hasAll(['userId', 'type', 'source', 'amount', 'frequency', 'startDate', 'isActive']) &&
+             request.resource.data.amount > 0 &&
+             request.resource.data.type in ['salary', 'bonus', 'other'] &&
+             request.resource.data.frequency in ['weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
+    }
+    
+    function isValidExpense() {
+      return request.resource.data.keys().hasAll(['userId', 'category', 'name', 'amount', 'frequency', 'isFixed', 'startDate']) &&
+             request.resource.data.amount > 0 &&
+             request.resource.data.category in ['rent', 'groceries', 'utilities', 'entertainment', 'other'] &&
+             request.resource.data.frequency in ['daily', 'weekly', 'monthly', 'quarterly', 'annually'];
+    }
+    
+    function isValidLoan() {
+      return request.resource.data.keys().hasAll(['userId', 'type', 'name', 'principal', 'currentBalance', 'interestRate', 'termMonths', 'monthlyPayment', 'startDate', 'nextPaymentDate']) &&
+             request.resource.data.principal > 0 &&
+             request.resource.data.currentBalance >= 0 &&
+             request.resource.data.currentBalance <= request.resource.data.principal &&
+             request.resource.data.interestRate >= 0 &&
+             request.resource.data.interestRate <= 100 &&
+             request.resource.data.termMonths > 0 &&
+             request.resource.data.monthlyPayment > 0 &&
+             request.resource.data.type in ['home', 'car', 'personal', 'other'];
+    }
+    
+    function isValidGoal() {
+      return request.resource.data.keys().hasAll(['userId', 'type', 'name', 'targetAmount', 'currentAmount', 'targetDate', 'monthlyContribution', 'priority', 'isActive']) &&
+             request.resource.data.targetAmount > 0 &&
+             request.resource.data.currentAmount >= 0 &&
+             request.resource.data.currentAmount <= request.resource.data.targetAmount &&
+             request.resource.data.monthlyContribution >= 0 &&
+             request.resource.data.type in ['retirement', 'education', 'vacation', 'emergency_fund', 'other'] &&
+             request.resource.data.priority in ['low', 'medium', 'high'];
+    }
+    
+    function isValidSnapshot() {
+      return request.resource.data.keys().hasAll(['userId', 'date', 'netWorth', 'totalIncome', 'totalExpenses', 'totalDebt', 'savingsRate', 'financialHealthScore']) &&
+             request.resource.data.totalIncome >= 0 &&
+             request.resource.data.totalExpenses >= 0 &&
+             request.resource.data.totalDebt >= 0 &&
+             request.resource.data.savingsRate >= 0 &&
+             request.resource.data.savingsRate <= 100 &&
+             request.resource.data.financialHealthScore >= 0 &&
+             request.resource.data.financialHealthScore <= 100;
+    }
+    
+    // Enhanced rules with validation
+    match /users/{userId} {
+      allow read, write: if isValidUser() && isOwner(userId);
+      
+      match /investments/{investmentId} {
+        allow read, write: if isValidUser() && isOwner(userId) && 
+                             (request.method == 'delete' || 
+                              (hasValidUserId() && hasValidTimestamps() && isValidInvestment()));
+      }
+      
+      match /income/{incomeId} {
+        allow read, write: if isValidUser() && isOwner(userId) && 
+                             (request.method == 'delete' || 
+                              (hasValidUserId() && hasValidTimestamps() && isValidIncome()));
+      }
+      
+      match /expenses/{expenseId} {
+        allow read, write: if isValidUser() && isOwner(userId) && 
+                             (request.method == 'delete' || 
+                              (hasValidUserId() && hasValidTimestamps() && isValidExpense()));
+      }
+      
+      match /loans/{loanId} {
+        allow read, write: if isValidUser() && isOwner(userId) && 
+                             (request.method == 'delete' || 
+                              (hasValidUserId() && hasValidTimestamps() && isValidLoan()));
+      }
+      
+      match /goals/{goalId} {
+        allow read, write: if isValidUser() && isOwner(userId) && 
+                             (request.method == 'delete' || 
+                              (hasValidUserId() && hasValidTimestamps() && isValidGoal()));
+      }
+      
+      match /snapshots/{snapshotId} {
+        allow read, write: if isValidUser() && isOwner(userId) && 
+                             (request.method == 'delete' || 
+                              (hasValidUserId() && hasValidTimestamps() && isValidSnapshot()));
+      }
+    }
+  }
+}

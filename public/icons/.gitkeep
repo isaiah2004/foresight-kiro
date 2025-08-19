@@ -1,0 +1,12 @@
+# Icons Directory
+
+Place your icon files here:
+- Favicon files
+- App icons
+- UI icons
+- Social media icons
+
+Example usage:
+```jsx
+<link rel="icon" href="/icons/favicon.ico" />
+<img src="/icons/menu.svg" alt="Menu" />

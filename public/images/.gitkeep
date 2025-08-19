@@ -1,0 +1,11 @@
+# Images Directory
+
+Place your image files here:
+- Logo files
+- Background images
+- Product images
+- Icons and graphics
+
+Example usage:
+```jsx
+<img src="/images/logo.png" alt="Company Logo" />
