@@ -133,6 +133,8 @@ interface InvestmentDialogProps {
   investment?: InvestmentDocument | null;
   onSaved: () => void;
   defaultType?: InvestmentType;
+  // Optional filter to restrict selectable investment types in the dropdown
+  allowedTypes?: InvestmentType[];
 }
 
 const investmentTypes = [
@@ -200,6 +202,7 @@ export function InvestmentDialog({
   investment,
   onSaved,
   defaultType = "stocks",
+  allowedTypes,
 }: InvestmentDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -223,6 +226,13 @@ export function InvestmentDialog({
       description: "",
     },
   });
+
+  // Compute the list of types to show based on optional allowedTypes
+  const displayInvestmentTypes = allowedTypes
+    ? investmentTypes.filter((t) =>
+        (allowedTypes as InvestmentType[]).includes(t.value as InvestmentType)
+      )
+    : investmentTypes;
 
   const currentTypeConfig = investmentTypes.find(
     (t) => t.value === selectedType
@@ -950,10 +960,18 @@ export function InvestmentDialog({
         cleanPricePercent: (investment.bondData as any)?.cleanPricePercent || undefined,
       });
     } else {
-      setSelectedType(defaultType);
+      // Ensure selected type respects allowedTypes if provided
+      if (allowedTypes && !allowedTypes.includes(defaultType)) {
+        setSelectedType(allowedTypes[0]);
+      } else {
+        setSelectedType(defaultType);
+      }
       form.reset({
         name: "",
-        type: defaultType,
+        type:
+          allowedTypes && !allowedTypes.includes(defaultType)
+            ? (allowedTypes[0] as InvestmentType)
+            : defaultType,
         symbol: "",
         quantity: 1,
         purchasePrice: 0,
@@ -962,7 +980,7 @@ export function InvestmentDialog({
         description: "",
       });
     }
-  }, [investment, form, defaultType]);
+  }, [investment, form, defaultType, allowedTypes]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1009,7 +1027,7 @@ export function InvestmentDialog({
                           <SelectValue placeholder="Choose investment type" />
                         </SelectTrigger>
                         <SelectContent className="max-h-[300px]">
-                          {investmentTypes.map((type) => (
+                          {displayInvestmentTypes.map((type) => (
                             <SelectItem
                               key={type.value}
                               value={type.value}

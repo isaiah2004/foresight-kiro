@@ -85,6 +85,7 @@ export interface UserPreferences {
 }
 
 export interface UserDocument extends BaseDocument {
+  userId: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -236,6 +237,9 @@ export interface Expense {
   id: string;
   userId: string;
   category: ExpenseCategory;
+  // New category system support
+  categoryId?: string; // points to user/system category document
+  tags?: string[]; // optional custom tags
   name: string;
   amount: CurrencyAmount;
   frequency: ExpenseFrequency;
@@ -247,6 +251,28 @@ export interface Expense {
 export interface ExpenseDocument extends Expense, BaseDocument {
   startDate: Timestamp;
   endDate?: Timestamp;
+}
+
+// New: Expense Category (per-user and system)
+export type ExpenseCategoryType = 'recurring' | 'one-time';
+
+export interface ExpenseCategoryItem {
+  id: string;
+  userId?: string | null; // null/undefined for system category
+  name: string;
+  emoji: string; // single emoji or short text icon
+  type: ExpenseCategoryType;
+  isSystem: boolean;
+}
+
+// For user-owned categories stored under users/{uid}
+export interface UserExpenseCategoryDocument extends Omit<ExpenseCategoryItem, 'userId'>, BaseDocument {}
+
+// For system categories stored in a global collection (no userId field)
+export interface SystemExpenseCategoryDocument extends Omit<ExpenseCategoryItem, 'userId'> {
+  id: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 // Loan types and interfaces

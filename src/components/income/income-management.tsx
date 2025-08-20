@@ -18,6 +18,7 @@ import { IncomeTable } from "./income-table";
 import { RaiseDialog } from "./raise-dialog";
 import { IncomeSummaryCards } from "./income-summary-cards";
 import { IncomeChart } from "./income-chart";
+import { IncomeCurrencyAnalysis } from "./income-currency-analysis";
 import { IncomeDocument } from "@/types/financial";
 import { IncomePageSkeleton } from "@/components/income/income-page-skeleton";
 
@@ -25,7 +26,8 @@ interface IncomeProjectionsData {
   projections: { month: string; amount: number }[];
   monthlyIncome: number;
   annualIncome: number;
-  breakdown: { type: string; amount: number; percentage: number }[];
+  breakdown: { type: string; amount: number; percentage: number; currency?: string }[];
+  currencyBreakdown?: { currency: string; amount: number; percentage: number }[];
 }
 
 export function IncomeManagement() {
@@ -76,9 +78,16 @@ export function IncomeManagement() {
 
   const fetchProjections = async () => {
     try {
-      const response = await fetch("/api/income/projections");
-      if (!response.ok) throw new Error("Failed to fetch projections");
-      const data = await response.json();
+      const [projectionsRes, currencyRes] = await Promise.all([
+        fetch("/api/income/projections"),
+        fetch("/api/income/currency-exposure").catch(() => null)
+      ]);
+      
+      if (!projectionsRes.ok) throw new Error("Failed to fetch projections");
+      
+      const data = await projectionsRes.json();
+      const currencyData = currencyRes?.ok ? await currencyRes.json() : [];
+      
       // Adapt API payload (which returns objects for monthly/annual) to numeric values
       const monthly = typeof data?.monthlyIncome === 'number'
         ? data.monthlyIncome
@@ -87,11 +96,21 @@ export function IncomeManagement() {
         ? data.annualIncome
         : (data?.annualIncome?.amount ?? 0);
 
+      // Process currency breakdown
+      const currencyBreakdown = Array.isArray(currencyData) 
+        ? currencyData.map((exp: any) => ({
+            currency: exp.currency,
+            amount: exp.totalValue?.amount || 0,
+            percentage: exp.percentage || 0
+          }))
+        : [];
+
       setProjectionsData({
         projections: Array.isArray(data?.projections) ? data.projections : [],
         monthlyIncome: Number.isFinite(monthly) ? monthly : 0,
         annualIncome: Number.isFinite(annual) ? annual : 0,
         breakdown: Array.isArray(data?.breakdown) ? data.breakdown : [],
+        currencyBreakdown,
       });
     } catch (error) {
       console.error("Error fetching projections:", error);
@@ -319,6 +338,9 @@ export function IncomeManagement() {
         breakdown={projectionsData.breakdown}
         isLoading={isLoading}
       />
+
+      {/* Currency Analysis */}
+      {user && <IncomeCurrencyAnalysis userId={user.id} />}
 
       {/* Income Sources Table */}
       <Card>

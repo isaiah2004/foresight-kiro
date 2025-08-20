@@ -550,6 +550,15 @@ export function InvestmentsByType({ type }: InvestmentsByTypeProps) {
         investment={editingInvestment}
         onSaved={handleInvestmentSaved}
         defaultType={type}
+        allowedTypes={
+          type === 'stocks'
+            ? (['stocks', 'etf', 'options'] as InvestmentType[])
+            : type === 'etf'
+            ? (['etf'] as InvestmentType[])
+            : type === 'options'
+            ? (['options'] as InvestmentType[])
+            : undefined
+        }
       />
     </div>
   );

@@ -11,12 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Tag } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { createExpenseSchema, updateExpenseSchema } from '@/lib/validations';
 import { Expense, ExpenseCategory, ExpenseFrequency } from '@/types/financial';
 import { z } from 'zod';
+import { CategoryPicker } from './category-picker';
+import { CategoryModal } from './category-modal';
 
 const expenseCategories: { value: ExpenseCategory; label: string; description: string }[] = [
   { value: 'rent', label: 'Rent/Mortgage', description: 'Housing payments and related costs' },
@@ -44,11 +46,13 @@ interface ExpenseDialogProps {
 
 // Form data type with string dates for form handling
 type FormData = {
-  category: ExpenseCategory;
+  category: ExpenseCategory; // legacy field kept for now
+  categoryId?: string;
+  tags?: string[];
   name: string;
   amount: number;
   frequency: ExpenseFrequency;
-  isFixed: boolean;
+  isFixed: boolean; // treat as recurring toggle default false
   startDate: string;
   endDate?: string;
 };
@@ -61,15 +65,19 @@ export function ExpenseDialog({
   onExpenseUpdated,
 }: ExpenseDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [tagsInput, setTagsInput] = useState('');
   const isEditing = !!expense;
 
   const form = useForm<FormData>({
     defaultValues: {
       category: 'other',
+  categoryId: undefined,
+  tags: [],
       name: '',
       amount: 0,
       frequency: 'monthly',
-      isFixed: false,
+  isFixed: false, // default non-recurring
       startDate: new Date().toISOString().split('T')[0],
     },
   });
@@ -78,6 +86,8 @@ export function ExpenseDialog({
     if (expense) {
       form.reset({
         category: expense.category,
+  categoryId: expense.categoryId,
+  tags: expense.tags ?? [],
         name: expense.name,
         amount: expense.amount.amount,
         frequency: expense.frequency,
@@ -88,10 +98,12 @@ export function ExpenseDialog({
     } else {
       form.reset({
         category: 'other',
+  categoryId: undefined,
+  tags: [],
         name: '',
         amount: 0,
         frequency: 'monthly',
-        isFixed: false,
+  isFixed: false,
         startDate: new Date().toISOString().split('T')[0],
       });
     }
@@ -102,7 +114,7 @@ export function ExpenseDialog({
     try {
       // Validate the data
       const schema = isEditing ? updateExpenseSchema : createExpenseSchema;
-      const validatedData = schema.parse(data);
+  const validatedData = schema.parse(data);
 
       const url = isEditing ? `/api/expenses/${expense.id}` : '/api/expenses';
       const method = isEditing ? 'PUT' : 'POST';
@@ -164,37 +176,30 @@ export function ExpenseDialog({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <FormField
                 control={form.control}
-                name="category"
+                name="categoryId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {expenseCategories.map((category) => (
-                          <SelectItem key={category.value} value={category.value}>
-                            <div>
-                              <div className="font-medium">{category.label}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {category.description}
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormDescription>Choose from quick categories or add your own.</FormDescription>
+                    <FormControl>
+                      <div>
+                        <CategoryPicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          onAddCategory={() => setCategoryModalOpen(true)}
+                        />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="frequency"
@@ -250,9 +255,9 @@ export function ExpenseDialog({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                   <div className="space-y-0.5">
-                    <FormLabel>Fixed Expense</FormLabel>
+                    <FormLabel>Recurring Expense</FormLabel>
                     <FormDescription>
-                      Is this a fixed expense that occurs regularly?
+                      Turn on if this repeats (e.g., rent, loans, insurance)
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -261,6 +266,45 @@ export function ExpenseDialog({
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="tags"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tags (optional)</FormLabel>
+                  <FormDescription>Add custom tags and press Enter</FormDescription>
+                  <FormControl>
+                    <div className="flex flex-wrap gap-2 border rounded-md p-2">
+                      {(field.value ?? []).map((t, idx) => (
+                        <span key={idx} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-secondary">
+                          <Tag className="w-3 h-3" /> {t}
+                          <button type="button" className="ml-1" onClick={() => field.onChange((field.value ?? []).filter((x) => x !== t))}>×</button>
+                        </span>
+                      ))}
+                      <input
+                        className="flex-1 min-w-[120px] outline-none bg-transparent"
+                        placeholder="Type and press Enter"
+                        value={tagsInput}
+                        onChange={(e)=>setTagsInput(e.target.value)}
+                        onKeyDown={(e)=>{
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const v = tagsInput.trim();
+                            if (v) {
+                              const next = Array.from(new Set([...(field.value ?? []), v])).slice(0,20);
+                              field.onChange(next);
+                              setTagsInput('');
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -370,6 +414,7 @@ export function ExpenseDialog({
           </form>
         </Form>
       </DialogContent>
+  <CategoryModal open={categoryModalOpen} onOpenChange={setCategoryModalOpen} onCreated={(id)=>form.setValue('categoryId', id)} />
     </Dialog>
   );
 }

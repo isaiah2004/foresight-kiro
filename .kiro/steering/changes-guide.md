@@ -1020,3 +1020,62 @@ The investment form was using a simplified validation schema that expected `purc
 3. `src/components/investments/investments-by-type.tsx` - Price refresh fix
 
 The investment form validation issue has been completely resolved and users can now successfully add and update investments with proper currency support.
+
+✅ Task 6.1: Multi-Currency Support for Investment Portfolio - COMPLETED
+🎯 Key Features Implemented:
+1. Currency Auto-Detection
+Enhanced investment dialog with automatic currency detection based on stock exchange suffixes
+Support for 20+ international exchanges (LSE, TSE, HKEX, ASX, etc.)
+Automatic currency assignment when fetching prices from different markets
+2. Currency-Aware Investment Calculations
+Updated investment tables to show both original and converted currency amounts
+Real-time currency conversion using the enhanced currency service
+Proper handling of multi-currency portfolio valuations
+3. Currency Exposure Analysis Component
+Comprehensive currency exposure visualization with pie charts and breakdowns
+Risk analysis with currency-specific risk scoring
+Volatility metrics tracking for different currencies
+Interactive tabs for exposure, risk, volatility, and hedging analysis
+4. Currency-Specific Market Data Integration
+Enhanced market data service supporting 20+ international exchanges
+Exchange-specific trading hours and market status tracking
+Multi-currency quote fetching for the same company across different exchanges
+Currency-specific market recommendations
+5. Currency Hedging Recommendations
+Intelligent hedging strategy recommendations based on portfolio risk
+5 different hedging strategies (ETFs, forwards, options, natural hedging, swaps)
+Step-by-step implementation guides
+Risk-appropriate strategy filtering based on portfolio size and complexity
+6. Enhanced Investment Portfolio UI
+New "Currency Analysis" and "Hedging" tabs in the portfolio view
+Display of both original and converted currency amounts
+Currency indicators showing auto-detected currencies
+Exchange information display
+🔧 Technical Implementation:
+New Components Created:
+CurrencyExposureAnalysis - Comprehensive currency risk analysis
+CurrencyHedgingRecommendations - Personalized hedging strategies
+EnhancedInvestmentDialog - Investment form with currency auto-detection
+EnhancedMarketDataService - Multi-exchange market data handling
+New API Routes:
+/api/market-data/enhanced-search - Search with exchange info
+/api/market-data/enhanced-quote - Quotes with currency data
+/api/market-data/multi-currency-quote - Cross-exchange quotes
+/api/market-data/exchanges - Exchange information and status
+Enhanced Features:
+Currency conversion in investment tables and summaries
+Exchange rate caching and fallback mechanisms
+Comprehensive test coverage for multi-currency functionality
+Support for 20+ international currencies and exchanges
+📊 Requirements Satisfied:
+✅ 11.2 - Currency selection with auto-detection
+✅ 11.3 - Currency-aware investment value calculations
+✅ 11.4 - Currency exposure analysis in portfolio summary
+✅ 11.10 - Display both original and converted amounts
+✅ 11.11 - Currency-specific market data integration (LSE, TSE, etc.)
+
+🧪 Testing:
+Unit tests for enhanced market data service
+Component tests for currency exposure analysis
+Integration tests for enhanced investment dialog
+Currency conversion and risk analysis test coverage

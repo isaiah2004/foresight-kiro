@@ -27,6 +27,8 @@ export function ExpenseManagement() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [analysis, setAnalysis] = useState<ExpenseAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -57,6 +59,8 @@ export function ExpenseManagement() {
   };
 
   const fetchAnalysis = async () => {
+    setAnalysisLoading(true);
+    setAnalysisError(null);
     try {
       const response = await fetch('/api/expenses/analysis');
       if (!response.ok) throw new Error('Failed to fetch analysis');
@@ -64,6 +68,15 @@ export function ExpenseManagement() {
       setAnalysis(data);
     } catch (error) {
       console.error('Error fetching analysis:', error);
+      setAnalysis(null);
+      setAnalysisError('Failed to load analysis');
+      toast({
+        title: 'Error',
+        description: 'Failed to load analysis. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setAnalysisLoading(false);
     }
   };
 
@@ -147,6 +160,24 @@ export function ExpenseManagement() {
       </div>
 
       {analysis && <ExpenseSummaryCards analysis={analysis} />}
+      {!analysis && analysisError && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Analysis unavailable
+            </CardTitle>
+            <CardDescription>
+              {analysisError}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={fetchAnalysis} disabled={analysisLoading}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
@@ -191,6 +222,24 @@ export function ExpenseManagement() {
                 </CardHeader>
                 <CardContent>
                   <ExpenseChart data={analysis.categoryBreakdown} />
+                </CardContent>
+              </Card>
+            )}
+            {!analysis && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChart className="h-5 w-5" />
+                    Spending Breakdown
+                  </CardTitle>
+                  <CardDescription>
+                    {analysisLoading ? 'Loading analysis…' : analysisError ? 'Analysis failed to load.' : 'No analysis available yet.'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {analysisError && (
+                    <Button onClick={fetchAnalysis} disabled={analysisLoading}>Retry</Button>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -241,6 +290,21 @@ export function ExpenseManagement() {
 
         <TabsContent value="analysis" className="space-y-4">
           {analysis && <ExpenseAnalysis analysis={analysis} />}
+          {!analysis && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Spending Analysis</CardTitle>
+                <CardDescription>
+                  {analysisLoading ? 'Loading analysis…' : analysisError ? 'Unable to load analysis.' : 'No analysis available yet.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analysisError && (
+                  <Button onClick={fetchAnalysis} disabled={analysisLoading}>Retry</Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="charts" className="space-y-4">
@@ -275,6 +339,21 @@ export function ExpenseManagement() {
                 </CardContent>
               </Card>
             </div>
+          )}
+          {!analysis && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Charts</CardTitle>
+                <CardDescription>
+                  {analysisLoading ? 'Loading charts…' : analysisError ? 'Unable to load charts because analysis failed.' : 'Charts will appear once analysis is available.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analysisError && (
+                  <Button onClick={fetchAnalysis} disabled={analysisLoading}>Retry</Button>
+                )}
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       </Tabs>

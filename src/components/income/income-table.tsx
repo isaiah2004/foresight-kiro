@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { MoreHorizontal, Edit, Trash2, DollarSign, TrendingUp, PauseCircle, PlayCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MoreHorizontal, Edit, Trash2, DollarSign, TrendingUp, PauseCircle, PlayCircle, Globe } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -29,9 +29,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { IncomeDocument } from '@/types/financial';
+import { IncomeDocument, CurrencyAmount } from '@/types/financial';
 import { useCurrency } from '@/contexts/currency-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface IncomeTableProps {
   incomes: IncomeDocument[];
@@ -40,6 +41,208 @@ interface IncomeTableProps {
   onToggleStatus?: (incomeId: string, isActive: boolean) => void;
   onAddRaise?: (income: IncomeDocument) => void;
   isLoading?: boolean;
+}
+
+// Component for individual income row with currency conversion
+function IncomeRow({ 
+  income, 
+  onEdit, 
+  onDelete, 
+  onToggleStatus, 
+  onAddRaise 
+}: {
+  income: IncomeDocument;
+  onEdit: (income: IncomeDocument) => void;
+  onDelete: (incomeId: string) => void;
+  onToggleStatus?: (incomeId: string, isActive: boolean) => void;
+  onAddRaise?: (income: IncomeDocument) => void;
+}) {
+  const { formatCurrency, convertAmount, primaryCurrency } = useCurrency();
+  const [convertedAmount, setConvertedAmount] = useState<CurrencyAmount | null>(null);
+  const [convertedMonthly, setConvertedMonthly] = useState<CurrencyAmount | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+
+  const convertToMonthly = (amount: number, frequency: string): number => {
+    switch (frequency) {
+      case 'weekly':
+        return amount * 4.33;
+      case 'bi-weekly':
+        return amount * 2.17;
+      case 'monthly':
+        return amount;
+      case 'quarterly':
+        return amount / 3;
+      case 'annually':
+        return amount / 12;
+      default:
+        return amount;
+    }
+  };
+
+  useEffect(() => {
+    const performConversion = async () => {
+      if (income.amount.currency === primaryCurrency) {
+        // No conversion needed
+        setConvertedAmount({
+          amount: income.amount.amount,
+          currency: primaryCurrency
+        });
+        setConvertedMonthly({
+          amount: convertToMonthly(income.amount.amount, income.frequency),
+          currency: primaryCurrency
+        });
+        return;
+      }
+
+      setIsConverting(true);
+      try {
+        // Convert original amount
+        const converted = await convertAmount(income.amount.amount, income.amount.currency, primaryCurrency);
+        setConvertedAmount(converted);
+
+        // Convert monthly equivalent
+        const monthlyAmount = convertToMonthly(income.amount.amount, income.frequency);
+        const convertedMonthlyAmount = await convertAmount(monthlyAmount, income.amount.currency, primaryCurrency);
+        setConvertedMonthly(convertedMonthlyAmount);
+      } catch (error) {
+        console.error('Currency conversion failed:', error);
+        // Fallback to original amounts
+        setConvertedAmount({
+          amount: income.amount.amount,
+          currency: income.amount.currency
+        });
+        setConvertedMonthly({
+          amount: convertToMonthly(income.amount.amount, income.frequency),
+          currency: income.amount.currency
+        });
+      } finally {
+        setIsConverting(false);
+      }
+    };
+
+    performConversion();
+  }, [income, convertAmount, primaryCurrency]);
+
+  const originalCurrency = income.amount.currency;
+  const showCurrencyIndicator = originalCurrency !== primaryCurrency;
+
+  return (
+    <TableRow key={income.id}>
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-2">
+          {income.source}
+          {showCurrencyIndicator && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Globe className="h-3 w-3 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Foreign currency income ({originalCurrency})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant="secondary">
+          {incomeTypeLabels[income.type]}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-1">
+          {isConverting ? (
+            <Skeleton className="h-4 w-20" />
+          ) : convertedAmount ? (
+            <>
+              <div className="font-medium">
+                {formatCurrency(convertedAmount.amount, convertedAmount.currency)}
+              </div>
+              {showCurrencyIndicator && (
+                <div className="text-xs text-muted-foreground">
+                  {formatCurrency(income.amount.amount, originalCurrency)} {originalCurrency}
+                </div>
+              )}
+            </>
+          ) : (
+            formatCurrency(income.amount.amount, income.amount.currency)
+          )}
+        </div>
+      </TableCell>
+      <TableCell>{frequencyLabels[income.frequency]}</TableCell>
+      <TableCell>
+        <div className="space-y-1">
+          {isConverting ? (
+            <Skeleton className="h-4 w-24" />
+          ) : convertedMonthly ? (
+            <>
+              <div className="font-medium">
+                {formatCurrency(convertedMonthly.amount, convertedMonthly.currency)}
+              </div>
+              {showCurrencyIndicator && (
+                <div className="text-xs text-muted-foreground">
+                  {formatCurrency(convertToMonthly(income.amount.amount, income.frequency), originalCurrency)} {originalCurrency}
+                </div>
+              )}
+            </>
+          ) : (
+            formatCurrency(convertToMonthly(income.amount.amount, income.frequency), income.amount.currency)
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant={income.isActive ? 'default' : 'secondary'}>
+          {income.isActive ? 'Active' : 'Inactive'}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(income)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Details
+            </DropdownMenuItem>
+            {onAddRaise && income.type === 'salary' && (
+              <DropdownMenuItem onClick={() => onAddRaise(income)}>
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Add Raise
+              </DropdownMenuItem>
+            )}
+            {onToggleStatus && (
+              <DropdownMenuItem 
+                onClick={() => onToggleStatus(income.id, !income.isActive)}
+              >
+                {income.isActive ? (
+                  <>
+                    <PauseCircle className="mr-2 h-4 w-4" />
+                    Deactivate
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="mr-2 h-4 w-4" />
+                    Reactivate
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onClick={() => onDelete(income.id)}
+              className="text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
 }
 
 const incomeTypeLabels = {
@@ -58,29 +261,11 @@ const frequencyLabels = {
 
 export function IncomeTable({ incomes, onEdit, onDelete, onToggleStatus, onAddRaise, isLoading }: IncomeTableProps) {
   const [deleteIncomeId, setDeleteIncomeId] = useState<string | null>(null);
-  const { formatCurrency } = useCurrency();
 
   const handleDelete = () => {
     if (deleteIncomeId) {
       onDelete(deleteIncomeId);
       setDeleteIncomeId(null);
-    }
-  };
-
-  const convertToMonthly = (amount: number, frequency: string): number => {
-    switch (frequency) {
-      case 'weekly':
-        return amount * 4.33;
-      case 'bi-weekly':
-        return amount * 2.17;
-      case 'monthly':
-        return amount;
-      case 'quarterly':
-        return amount / 3;
-      case 'annually':
-        return amount / 12;
-      default:
-        return amount;
     }
   };
 
@@ -146,69 +331,14 @@ export function IncomeTable({ incomes, onEdit, onDelete, onToggleStatus, onAddRa
           </TableHeader>
           <TableBody>
             {incomes.map((income) => (
-              <TableRow key={income.id}>
-                <TableCell className="font-medium">{income.source}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {incomeTypeLabels[income.type]}
-                  </Badge>
-                </TableCell>
-                <TableCell>{formatCurrency(income.amount.amount, income.amount.currency)}</TableCell>
-                <TableCell>{frequencyLabels[income.frequency]}</TableCell>
-                <TableCell className="font-medium">
-                  {formatCurrency(convertToMonthly(income.amount.amount, income.frequency), income.amount.currency)}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={income.isActive ? 'default' : 'secondary'}>
-                    {income.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onEdit(income)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Details
-                      </DropdownMenuItem>
-                      {onAddRaise && income.type === 'salary' && (
-                        <DropdownMenuItem onClick={() => onAddRaise(income)}>
-                          <TrendingUp className="mr-2 h-4 w-4" />
-                          Add Raise
-                        </DropdownMenuItem>
-                      )}
-                      {onToggleStatus && (
-                        <DropdownMenuItem 
-                          onClick={() => onToggleStatus(income.id, !income.isActive)}
-                        >
-                          {income.isActive ? (
-                            <>
-                              <PauseCircle className="mr-2 h-4 w-4" />
-                              Deactivate
-                            </>
-                          ) : (
-                            <>
-                              <PlayCircle className="mr-2 h-4 w-4" />
-                              Reactivate
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem
-                        onClick={() => setDeleteIncomeId(income.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
+              <IncomeRow
+                key={income.id}
+                income={income}
+                onEdit={onEdit}
+                onDelete={setDeleteIncomeId}
+                onToggleStatus={onToggleStatus}
+                onAddRaise={onAddRaise}
+              />
             ))}
           </TableBody>
         </Table>
