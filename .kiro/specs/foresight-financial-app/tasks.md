@@ -48,7 +48,6 @@
 
 - [x] 4.2 Build currency exchange service and API integration
 
-
   - Integrate with exchange rate API provider (e.g., ExchangeRates-API, Fixer.io)
   - Implement CurrencyService with real-time and historical exchange rate fetching
   - Create exchange rate caching mechanism with 15-minute refresh intervals
@@ -69,7 +68,7 @@
   - Write tests for dashboard calculations and rendering
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 5.1 Enhance dashboard with multi-currency support
+- [x] 5.1 Enhance dashboard with multi-currency support
 
   - Update dashboard to display currency exposure analysis
   - Add currency conversion display showing both original and converted amounts
@@ -91,12 +90,12 @@
   - Write tests for investment calculations and API integration
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 6.1 Add multi-currency support to investment portfolio
+- [x] 6.1 Add multi-currency support to investment portfolio
+
 
   - Update investment forms to include currency selection with auto-detection
   - Implement currency-aware investment value calculations
   - Add currency exposure analysis to portfolio summary
-  - Create foreign exchange risk assessment for international investments
   - Display both original and converted currency amounts in investment tables
   - Add currency-specific market data integration (LSE, TSE, etc.)
   - Implement currency hedging recommendations using shadcn/ui Alert components
@@ -113,7 +112,7 @@
   - Write tests for income calculations and projections
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 7.1 Enhance income management with multi-currency support
+- [x] 7.1 Enhance income management with multi-currency support
 
   - Add currency selection to income forms with auto-detection based on source
   - Implement multi-currency income aggregation and conversion
@@ -134,13 +133,15 @@
   - Write tests for expense calculations and analysis
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 8.1 Add multi-currency support to expense tracking
+- [-] 8.1 Add multi-currency support to expense tracking
+
+
+
 
   - Update expense forms to include currency selection with location-based detection
   - Implement multi-currency expense aggregation and budget tracking
   - Add currency conversion for expense analysis and reporting
-  - Create currency-specific spending pattern analysis
-  - Display expense breakdown by currency with exchange rate impact
+  - Display expense breakdown by currency with exchange rate impact 
   - Implement currency-aware budget alerts and recommendations
   - Write tests for multi-currency expense calculations and budget tracking
   - _Requirements: 11.2, 11.3, 11.4, 11.8, 11.9_

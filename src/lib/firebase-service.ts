@@ -171,6 +171,72 @@ export abstract class BaseFirebaseService<T extends { id?: string; userId: strin
       );
     } catch (error) {
       console.error(`Error getting filtered ${this.collectionName}:`, error);
+
+      // Fallback for Firestore composite index errors: perform in-memory filtering
+  const errObj = (error ?? {}) as { code?: string; message?: string };
+  const code = errObj.code;
+  const message: string = errObj.message || '';
+      const requiresIndex = code === 'failed-precondition' || /index/i.test(message);
+      if (requiresIndex) {
+        console.warn(
+          `Composite index likely required for ${this.collectionName}. Falling back to in-memory filtering. Consider creating the suggested index from the Firebase Console link in the server logs.`
+        );
+
+        try {
+          // Fetch all then filter locally to avoid composite index requirement
+          const allDocs = await this.getAll(userId);
+
+          // Helper compare function
+          const cmp = (a: any, b: any) => {
+            const av = a instanceof Date ? a.getTime() : a;
+            const bv = b instanceof Date ? b.getTime() : b;
+            if (av < bv) return -1;
+            if (av > bv) return 1;
+            return 0;
+          };
+
+          // Apply filters
+          let results = allDocs.filter((doc: any) =>
+            filters.every(f => {
+              const v = f.field.split('.').reduce((o: any, k: string) => (o ? o[k] : undefined), doc);
+              const target = f.value;
+              switch (f.operator) {
+                case '==': return v === target;
+                case '!=': return v !== target;
+                case '<': return cmp(v, target) < 0;
+                case '<=': return cmp(v, target) <= 0;
+                case '>': return cmp(v, target) > 0;
+                case '>=': return cmp(v, target) >= 0;
+                case 'in': return Array.isArray(target) && target.includes(v);
+                case 'not-in': return Array.isArray(target) && !target.includes(v);
+                case 'array-contains': return Array.isArray(v) && v.includes(target);
+                default: return false;
+              }
+            })
+          );
+
+          // Apply ordering
+          if (orderByField) {
+            results.sort((a: any, b: any) => {
+              const va = orderByField.split('.').reduce((o: any, k: string) => (o ? o[k] : undefined), a);
+              const vb = orderByField.split('.').reduce((o: any, k: string) => (o ? o[k] : undefined), b);
+              const order = cmp(va, vb);
+              return orderDirection === 'asc' ? order : -order;
+            });
+          }
+
+          // Apply limit
+          if (limitCount && results.length > limitCount) {
+            results = results.slice(0, limitCount);
+          }
+
+          return results as T[];
+        } catch (fallbackErr) {
+          console.error('Fallback filtering failed:', fallbackErr);
+          throw new Error(`Failed to get filtered ${this.collectionName}`);
+        }
+      }
+
       throw new Error(`Failed to get filtered ${this.collectionName}`);
     }
   }

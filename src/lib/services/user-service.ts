@@ -78,6 +78,11 @@ export class UserService {
     }
   }
 
+  // Alias for getUser for consistency with other services
+  async getById(userId: string): Promise<UserDocument | null> {
+    return this.getUser(userId);
+  }
+
   // Update user preferences
   async updatePreferences(userId: string, preferences: Partial<UserPreferences>): Promise<void> {
     try {

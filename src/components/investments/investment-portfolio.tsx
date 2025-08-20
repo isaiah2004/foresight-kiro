@@ -11,6 +11,8 @@ import { InvestmentDialog } from "./investment-dialog";
 import { SimplePortfolioSummaryCards } from "./simple-portfolio-summary-cards";
 import { SimplePortfolioChart } from "./simple-portfolio-chart";
 import { InvestmentPortfolioSkeleton } from "./investment-portfolio-skeleton";
+import { CurrencyExposureAnalysis } from "./currency-exposure-analysis";
+import { CurrencyHedgingRecommendations } from "./currency-hedging-recommendations";
 import { Button } from "@/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -275,6 +277,8 @@ export function InvestmentPortfolio() {
         <TabsList>
           <TabsTrigger value="table">Holdings</TabsTrigger>
           <TabsTrigger value="chart">Performance</TabsTrigger>
+          <TabsTrigger value="currency">Currency Analysis</TabsTrigger>
+          <TabsTrigger value="hedging">Hedging</TabsTrigger>
         </TabsList>
 
         <TabsContent value="table" className="space-y-4">
@@ -287,6 +291,14 @@ export function InvestmentPortfolio() {
 
         <TabsContent value="chart" className="space-y-4">
           <SimplePortfolioChart investments={investments} />
+        </TabsContent>
+
+        <TabsContent value="currency" className="space-y-4">
+          <CurrencyExposureAnalysis investments={investments} />
+        </TabsContent>
+
+        <TabsContent value="hedging" className="space-y-4">
+          <CurrencyHedgingRecommendations investments={investments} />
         </TabsContent>
       </Tabs>
 

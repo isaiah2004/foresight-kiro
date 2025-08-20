@@ -295,6 +295,8 @@ export const expenseSchema = z.object({
   id: z.string().optional(),
   userId: z.string().min(1, 'User ID is required'),
   category: expenseCategorySchema,
+  categoryId: z.string().min(1).optional(),
+  tags: z.array(z.string().min(1)).max(20).optional(),
   name: z.string().min(1, 'Expense name is required'),
   amount: currencyAmountSchema.refine((data) => data.amount > 0, 'Amount must be positive'),
   frequency: expenseFrequencySchema,
@@ -313,6 +315,20 @@ export const expenseSchema = z.object({
 
 export const createExpenseSchema = expenseSchema.omit({ id: true });
 export const updateExpenseSchema = expenseSchema.partial().required({ id: true });
+
+// Category validation schemas (new)
+export const expenseCategoryTypeSchema = z.enum(['recurring', 'one-time']);
+export const expenseCategoryItemSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Category name is required'),
+  emoji: z.string().min(1, 'Emoji is required').max(4),
+  type: expenseCategoryTypeSchema,
+  isSystem: z.boolean().default(false),
+});
+export const createExpenseCategorySchema = expenseCategoryItemSchema.omit({ id: true }).extend({
+  userId: z.string().min(1, 'User ID is required').optional(),
+});
+export const updateExpenseCategorySchema = expenseCategoryItemSchema.partial().required({ id: true });
 
 // Loan validation schemas
 export const loanTypeSchema = z.enum(['home', 'car', 'personal', 'other']);

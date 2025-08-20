@@ -1,13 +1,16 @@
 'use client';
 
-import { DollarSign, TrendingUp, Calendar, PieChart } from 'lucide-react';
+import { DollarSign, TrendingUp, Calendar, PieChart, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useCurrency } from '@/contexts/currency-context';
 
 interface IncomeSummaryData {
   monthlyIncome: number;
   annualIncome: number;
-  breakdown: { type: string; amount: number; percentage: number }[];
+  breakdown: { type: string; amount: number; percentage: number; currency?: string }[];
+  currencyBreakdown?: { currency: string; amount: number; percentage: number }[];
+  foreignIncomePercentage?: number;
 }
 
 interface IncomeSummaryCardsProps {
@@ -98,14 +101,41 @@ export function IncomeSummaryCards({ data, isLoading }: IncomeSummaryCardsProps)
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Income Sources</CardTitle>
-          <PieChart className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Currency Exposure</CardTitle>
+          <Globe className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{data.breakdown.length}</div>
-          <p className="text-xs text-muted-foreground">
-            Active income streams
-          </p>
+          <div className="space-y-2">
+            {data.currencyBreakdown && data.currencyBreakdown.length > 1 ? (
+              <>
+                <div className="text-2xl font-bold">
+                  {data.currencyBreakdown.length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Currencies
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {data.currencyBreakdown.slice(0, 3).map((curr) => (
+                    <Badge key={curr.currency} variant="secondary" className="text-xs">
+                      {curr.currency} {curr.percentage.toFixed(0)}%
+                    </Badge>
+                  ))}
+                  {data.currencyBreakdown.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{data.currencyBreakdown.length - 3}
+                    </Badge>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{formatCurrency(0).replace(/[\d.,]/g, '').trim()}</div>
+                <p className="text-xs text-muted-foreground">
+                  Single currency
+                </p>
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
