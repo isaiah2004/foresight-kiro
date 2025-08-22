@@ -34,6 +34,29 @@ export abstract class BaseFirebaseService<T extends { id?: string; userId: strin
     return doc(db, 'users', userId, this.collectionName, docId);
   }
 
+  // Recursively remove any undefined values (Firestore does not allow undefined)
+  private cleanUndefined(value: any): any {
+    if (Array.isArray(value)) {
+      return value
+        .map(v => this.cleanUndefined(v))
+        .filter(v => v !== undefined);
+    }
+    if (value && typeof value === 'object' && !(value instanceof Timestamp) && !(value instanceof Date)) {
+      const out: Record<string, any> = {};
+      Object.keys(value).forEach(key => {
+        const v = (value as any)[key];
+        if (v !== undefined) {
+          const cleaned = this.cleanUndefined(v);
+          if (cleaned !== undefined) {
+            out[key] = cleaned;
+          }
+        }
+      });
+      return out;
+    }
+    return value;
+  }
+
   // Add timestamps to document data
   protected addTimestamps(data: Partial<T>, isUpdate = false): DocumentData {
     const now = Timestamp.now();
@@ -50,8 +73,9 @@ export abstract class BaseFirebaseService<T extends { id?: string; userId: strin
         result[key] = Timestamp.fromDate(result[key]);
       }
     });
-    
-    return result;
+
+    // Remove undefined values to satisfy Firestore constraints
+    return this.cleanUndefined(result);
   }
 
   // Convert Firestore document to typed object

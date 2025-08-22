@@ -5,14 +5,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, PieChart, BarChart3 } from 'lucide-react';
-import { ExpenseCategory } from '@/types/financial';
+import { ExpenseCategory, CurrencyAmount } from '@/types/financial';
 import { useCurrency } from '@/contexts/currency-context';
 
 interface ExpenseAnalysisData {
-  totalMonthly: number;
-  fixedExpenses: number;
-  variableExpenses: number;
-  categoryBreakdown: Record<ExpenseCategory, number>;
+  totalMonthly: CurrencyAmount;
+  fixedExpenses: CurrencyAmount;
+  variableExpenses: CurrencyAmount;
+  categoryBreakdown: Record<ExpenseCategory, CurrencyAmount>;
   suggestions: string[];
 }
 
@@ -43,16 +43,17 @@ export function ExpenseAnalysis({ analysis }: ExpenseAnalysisProps) {
     let score = 100;
     
     // Deduct points for high entertainment spending (>15%)
-    const entertainmentPercentage = analysis.totalMonthly > 0 
-      ? (analysis.categoryBreakdown.entertainment / analysis.totalMonthly) * 100 
+    const entertainmentPercentage = analysis.totalMonthly.amount > 0 
+      ? (analysis.categoryBreakdown.entertainment.amount / analysis.totalMonthly.amount) * 100 
       : 0;
     if (entertainmentPercentage > 15) score -= 20;
     
     // Deduct points if variable expenses exceed fixed expenses
-    if (analysis.variableExpenses > analysis.fixedExpenses) score -= 15;
+    if (analysis.variableExpenses.amount > analysis.fixedExpenses.amount) score -= 15;
     
     // Deduct points for unbalanced spending (one category >50%)
-    const highestCategoryPercentage = Math.max(...Object.values(analysis.categoryBreakdown)) / analysis.totalMonthly * 100;
+    const categoryAmounts = Object.values(analysis.categoryBreakdown).map(ca => ca.amount);
+    const highestCategoryPercentage = Math.max(...categoryAmounts) / analysis.totalMonthly.amount * 100;
     if (highestCategoryPercentage > 50) score -= 25;
     
     return Math.max(0, score);
@@ -98,7 +99,7 @@ export function ExpenseAnalysis({ analysis }: ExpenseAnalysisProps) {
             <div className="text-right">
               <div className="text-sm text-muted-foreground">Total Monthly</div>
               <div className="text-xl font-semibold">
-                {formatCurrency(analysis.totalMonthly)}
+                {formatCurrency(analysis.totalMonthly.amount)}
               </div>
             </div>
           </div>
@@ -120,16 +121,16 @@ export function ExpenseAnalysis({ analysis }: ExpenseAnalysisProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold mb-2">
-              {formatCurrency(analysis.fixedExpenses)}
+              {formatCurrency(analysis.fixedExpenses.amount)}
             </div>
             <div className="flex items-center justify-between">
               <Progress 
-                value={analysis.totalMonthly > 0 ? (analysis.fixedExpenses / analysis.totalMonthly) * 100 : 0} 
+                value={analysis.totalMonthly.amount > 0 ? (analysis.fixedExpenses.amount / analysis.totalMonthly.amount) * 100 : 0} 
                 className="flex-1 mr-2" 
               />
               <span className="text-sm text-muted-foreground">
-                {analysis.totalMonthly > 0 
-                  ? ((analysis.fixedExpenses / analysis.totalMonthly) * 100).toFixed(0)
+                {analysis.totalMonthly.amount > 0 
+                  ? ((analysis.fixedExpenses.amount / analysis.totalMonthly.amount) * 100).toFixed(0)
                   : 0}%
               </span>
             </div>
@@ -151,16 +152,16 @@ export function ExpenseAnalysis({ analysis }: ExpenseAnalysisProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold mb-2">
-              {formatCurrency(analysis.variableExpenses)}
+              {formatCurrency(analysis.variableExpenses.amount)}
             </div>
             <div className="flex items-center justify-between">
               <Progress 
-                value={analysis.totalMonthly > 0 ? (analysis.variableExpenses / analysis.totalMonthly) * 100 : 0} 
+                value={analysis.totalMonthly.amount > 0 ? (analysis.variableExpenses.amount / analysis.totalMonthly.amount) * 100 : 0} 
                 className="flex-1 mr-2" 
               />
               <span className="text-sm text-muted-foreground">
-                {analysis.totalMonthly > 0 
-                  ? ((analysis.variableExpenses / analysis.totalMonthly) * 100).toFixed(0)
+                {analysis.totalMonthly.amount > 0 
+                  ? ((analysis.variableExpenses.amount / analysis.totalMonthly.amount) * 100).toFixed(0)
                   : 0}%
               </span>
             </div>
@@ -185,10 +186,11 @@ export function ExpenseAnalysis({ analysis }: ExpenseAnalysisProps) {
         <CardContent>
           <div className="space-y-4">
             {Object.entries(analysis.categoryBreakdown)
-              .filter(([_, amount]) => amount > 0)
-              .sort(([, a], [, b]) => b - a)
-              .map(([category, amount]) => {
-                const percentage = analysis.totalMonthly > 0 ? (amount / analysis.totalMonthly) * 100 : 0;
+              .filter(([_, currencyAmount]) => currencyAmount.amount > 0)
+              .sort(([, a], [, b]) => b.amount - a.amount)
+              .map(([category, currencyAmount]) => {
+                const amount = currencyAmount.amount;
+                const percentage = analysis.totalMonthly.amount > 0 ? (amount / analysis.totalMonthly.amount) * 100 : 0;
                 const isHigh = percentage > 30;
                 
                 return (

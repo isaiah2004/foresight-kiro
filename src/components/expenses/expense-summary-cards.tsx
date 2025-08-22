@@ -2,15 +2,20 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, AlertTriangle } from 'lucide-react';
-import { ExpenseCategory } from '@/types/financial';
+import { TrendingUp, TrendingDown, DollarSign, PieChart, AlertTriangle, Globe } from 'lucide-react';
+import { ExpenseCategory, CurrencyAmount } from '@/types/financial';
+import { useCurrency } from '@/contexts/currency-context';
 
 interface ExpenseAnalysisData {
-  totalMonthly: number;
-  fixedExpenses: number;
-  variableExpenses: number;
-  categoryBreakdown: Record<ExpenseCategory, number>;
+  totalMonthly: CurrencyAmount;
+  fixedExpenses: CurrencyAmount;
+  variableExpenses: CurrencyAmount;
+  categoryBreakdown: Record<ExpenseCategory, CurrencyAmount>;
   suggestions: string[];
+  currencyExposure?: {
+    totalCurrencies: number;
+    foreignCurrencyPercentage: number;
+  };
 }
 
 interface ExpenseSummaryCardsProps {
@@ -18,24 +23,19 @@ interface ExpenseSummaryCardsProps {
 }
 
 export function ExpenseSummaryCards({ analysis }: ExpenseSummaryCardsProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  const { formatCurrency } = useCurrency();
 
-  const fixedPercentage = analysis.totalMonthly > 0 
-    ? (analysis.fixedExpenses / analysis.totalMonthly) * 100 
+  const fixedPercentage = analysis.totalMonthly.amount > 0 
+    ? (analysis.fixedExpenses.amount / analysis.totalMonthly.amount) * 100 
     : 0;
 
-  const variablePercentage = analysis.totalMonthly > 0 
-    ? (analysis.variableExpenses / analysis.totalMonthly) * 100 
+  const variablePercentage = analysis.totalMonthly.amount > 0 
+    ? (analysis.variableExpenses.amount / analysis.totalMonthly.amount) * 100 
     : 0;
 
   // Find highest spending category
   const highestCategory = Object.entries(analysis.categoryBreakdown)
-    .reduce((a, b) => a[1] > b[1] ? a : b);
+    .reduce((a, b) => a[1].amount > b[1].amount ? a : b);
 
   const categoryLabels: Record<ExpenseCategory, string> = {
     rent: 'Rent/Mortgage',
@@ -53,10 +53,16 @@ export function ExpenseSummaryCards({ analysis }: ExpenseSummaryCardsProps) {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(analysis.totalMonthly)}</div>
+          <div className="text-2xl font-bold">{formatCurrency(analysis.totalMonthly.amount)}</div>
           <p className="text-xs text-muted-foreground">
-            {formatCurrency(analysis.totalMonthly * 12)} annually
+            {formatCurrency(analysis.totalMonthly.amount * 12)} annually
           </p>
+          {analysis.currencyExposure && analysis.currencyExposure.totalCurrencies > 1 && (
+            <div className="flex items-center mt-2 text-blue-600">
+              <Globe className="h-3 w-3 mr-1" />
+              <span className="text-xs">{analysis.currencyExposure.totalCurrencies} currencies</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -66,7 +72,7 @@ export function ExpenseSummaryCards({ analysis }: ExpenseSummaryCardsProps) {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(analysis.fixedExpenses)}</div>
+          <div className="text-2xl font-bold">{formatCurrency(analysis.fixedExpenses.amount)}</div>
           <div className="flex items-center space-x-2 mt-2">
             <Progress value={fixedPercentage} className="flex-1" />
             <span className="text-xs text-muted-foreground">
@@ -82,7 +88,7 @@ export function ExpenseSummaryCards({ analysis }: ExpenseSummaryCardsProps) {
           <TrendingDown className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(analysis.variableExpenses)}</div>
+          <div className="text-2xl font-bold">{formatCurrency(analysis.variableExpenses.amount)}</div>
           <div className="flex items-center space-x-2 mt-2">
             <Progress value={variablePercentage} className="flex-1" />
             <span className="text-xs text-muted-foreground">
@@ -98,7 +104,7 @@ export function ExpenseSummaryCards({ analysis }: ExpenseSummaryCardsProps) {
           <PieChart className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(highestCategory[1])}</div>
+          <div className="text-2xl font-bold">{formatCurrency(highestCategory[1].amount)}</div>
           <p className="text-xs text-muted-foreground">
             {categoryLabels[highestCategory[0] as ExpenseCategory]}
           </p>
@@ -106,6 +112,12 @@ export function ExpenseSummaryCards({ analysis }: ExpenseSummaryCardsProps) {
             <div className="flex items-center mt-2 text-amber-600">
               <AlertTriangle className="h-3 w-3 mr-1" />
               <span className="text-xs">Has suggestions</span>
+            </div>
+          )}
+          {analysis.currencyExposure && analysis.currencyExposure.foreignCurrencyPercentage > 0 && (
+            <div className="flex items-center mt-1 text-blue-600">
+              <Globe className="h-3 w-3 mr-1" />
+              <span className="text-xs">{analysis.currencyExposure.foreignCurrencyPercentage.toFixed(1)}% foreign</span>
             </div>
           )}
         </CardContent>

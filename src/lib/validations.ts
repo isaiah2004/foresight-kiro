@@ -313,8 +313,34 @@ export const expenseSchema = z.object({
   path: ['endDate'],
 });
 
-export const createExpenseSchema = expenseSchema.omit({ id: true });
+export const createExpenseSchema = expenseSchema.omit({ id: true, userId: true });
 export const updateExpenseSchema = expenseSchema.partial().required({ id: true });
+
+// Expense form schemas (client-side) using string dates and numeric amount + currency
+export const createExpenseFormSchema = z.object({
+  category: expenseCategorySchema,
+  categoryId: z.string().min(1).optional(),
+  tags: z.array(z.string().min(1)).max(20).optional(),
+  name: z.string().min(1, 'Expense name is required'),
+  amount: z.number().positive('Amount must be positive'),
+  currency: currencyCodeSchema,
+  frequency: expenseFrequencySchema,
+  isFixed: z.boolean(),
+  startDate: z.string().min(1, 'Start date is required'),
+  endDate: z.string().optional(),
+}).refine((data) => {
+  if (data.endDate && data.startDate) {
+    return new Date(data.endDate) > new Date(data.startDate);
+  }
+  return true;
+}, {
+  message: 'End date must be after start date',
+  path: ['endDate'],
+});
+
+export const updateExpenseFormSchema = createExpenseFormSchema.partial().extend({
+  id: z.string().min(1, 'Expense ID is required'),
+});
 
 // Category validation schemas (new)
 export const expenseCategoryTypeSchema = z.enum(['recurring', 'one-time']);

@@ -12,6 +12,9 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': ['@swc/jest'],
+  },
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
@@ -27,6 +30,9 @@ const customJestConfig = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
       },
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['@swc/jest'],
+      },
     },
     {
       displayName: 'server',
@@ -38,6 +44,9 @@ const customJestConfig = {
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
+      },
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['@swc/jest'],
       },
     },
   ],

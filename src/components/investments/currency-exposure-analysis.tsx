@@ -180,7 +180,7 @@ export function CurrencyExposureAnalysis({ investments }: CurrencyExposureAnalys
           Currency Exposure Analysis
         </CardTitle>
         <CardDescription>
-          Analyze your portfolio's currency distribution and foreign exchange risk
+          Analyze your portfolio&apos;s currency distribution and foreign exchange risk
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -396,7 +396,7 @@ export function CurrencyExposureAnalysis({ investments }: CurrencyExposureAnalys
                   <Info className="h-4 w-4" />
                   <AlertTitle>No Hedging Needed</AlertTitle>
                   <AlertDescription>
-                    Your current currency exposure levels don't require immediate hedging strategies.
+                    Your current currency exposure levels don&apos;t require immediate hedging strategies.
                   </AlertDescription>
                 </Alert>
               ) : (

@@ -55,11 +55,13 @@ export async function POST(request: NextRequest) {
     });
 
     // Convert dates to Firestore Timestamps
-    const expenseData = {
+    const expenseData: any = {
       ...validatedData,
       startDate: Timestamp.fromDate(validatedData.startDate),
-      endDate: validatedData.endDate ? Timestamp.fromDate(validatedData.endDate) : undefined,
     };
+    if (validatedData.endDate) {
+      expenseData.endDate = Timestamp.fromDate(validatedData.endDate);
+    }
 
     const expenseId = await expenseService.create(userId, expenseData);
     

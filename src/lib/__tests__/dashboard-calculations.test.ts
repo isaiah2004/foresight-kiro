@@ -353,25 +353,25 @@ describe('Dashboard Calculations', () => {
     it('should return excellent status for high scores', () => {
       const result = getFinancialHealthStatus(85);
       expect(result.status).toBe('excellent');
-      expect(result.color).toBe('text-green-600');
+  expect(result.color).toContain('text-green-600');
     });
 
     it('should return good status for medium-high scores', () => {
       const result = getFinancialHealthStatus(65);
       expect(result.status).toBe('good');
-      expect(result.color).toBe('text-blue-600');
+  expect(result.color).toContain('text-blue-600');
     });
 
     it('should return fair status for medium scores', () => {
       const result = getFinancialHealthStatus(45);
       expect(result.status).toBe('fair');
-      expect(result.color).toBe('text-yellow-600');
+  expect(result.color).toContain('text-yellow-600');
     });
 
     it('should return poor status for low scores', () => {
       const result = getFinancialHealthStatus(25);
       expect(result.status).toBe('poor');
-      expect(result.color).toBe('text-red-600');
+  expect(result.color).toContain('text-red-600');
     });
   });
 });

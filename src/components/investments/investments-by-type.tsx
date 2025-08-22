@@ -491,11 +491,11 @@ export function InvestmentsByType({ type }: InvestmentsByTypeProps) {
               </p>
             </div>
           </div>
-          <div className="mt-4 p-4 bg-muted rounded-lg">
+          {/* <div className="mt-4 p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground">
               {typeInfo.education}
             </p>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
 

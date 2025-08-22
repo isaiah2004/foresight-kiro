@@ -19,6 +19,7 @@ import { Expense, ExpenseCategory, ExpenseFrequency } from '@/types/financial';
 import { z } from 'zod';
 import { CategoryPicker } from './category-picker';
 import { CategoryModal } from './category-modal';
+import { useCurrency } from '@/contexts/currency-context';
 
 const expenseCategories: { value: ExpenseCategory; label: string; description: string }[] = [
   { value: 'rent', label: 'Rent/Mortgage', description: 'Housing payments and related costs' },
@@ -51,6 +52,7 @@ type FormData = {
   tags?: string[];
   name: string;
   amount: number;
+  currency: string;
   frequency: ExpenseFrequency;
   isFixed: boolean; // treat as recurring toggle default false
   startDate: string;
@@ -67,17 +69,19 @@ export function ExpenseDialog({
   const [loading, setLoading] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
+  const { primaryCurrency, currencies } = useCurrency();
   const isEditing = !!expense;
 
   const form = useForm<FormData>({
     defaultValues: {
       category: 'other',
-  categoryId: undefined,
-  tags: [],
+      categoryId: undefined,
+      tags: [],
       name: '',
       amount: 0,
+      currency: primaryCurrency,
       frequency: 'monthly',
-  isFixed: false, // default non-recurring
+      isFixed: false, // default non-recurring
       startDate: new Date().toISOString().split('T')[0],
     },
   });
@@ -86,10 +90,11 @@ export function ExpenseDialog({
     if (expense) {
       form.reset({
         category: expense.category,
-  categoryId: expense.categoryId,
-  tags: expense.tags ?? [],
+        categoryId: expense.categoryId,
+        tags: expense.tags ?? [],
         name: expense.name,
         amount: expense.amount.amount,
+        currency: expense.amount.currency,
         frequency: expense.frequency,
         isFixed: expense.isFixed,
         startDate: expense.startDate.toDate().toISOString().split('T')[0],
@@ -98,23 +103,32 @@ export function ExpenseDialog({
     } else {
       form.reset({
         category: 'other',
-  categoryId: undefined,
-  tags: [],
+        categoryId: undefined,
+        tags: [],
         name: '',
         amount: 0,
+        currency: primaryCurrency,
         frequency: 'monthly',
-  isFixed: false,
+        isFixed: false,
         startDate: new Date().toISOString().split('T')[0],
       });
     }
-  }, [expense, form]);
+  }, [expense, form, primaryCurrency]);
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     try {
-      // Validate the data
-      const schema = isEditing ? updateExpenseSchema : createExpenseSchema;
-  const validatedData = schema.parse(data);
+      // Transform form data to match API schema
+      const transformedData = {
+        ...data,
+        amount: {
+          amount: data.amount,
+          currency: data.currency,
+        },
+      };
+
+      // Remove the separate currency field since it's now part of amount
+      const { currency, ...dataWithoutCurrency } = transformedData;
 
       const url = isEditing ? `/api/expenses/${expense.id}` : '/api/expenses';
       const method = isEditing ? 'PUT' : 'POST';
@@ -124,11 +138,12 @@ export function ExpenseDialog({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(validatedData),
+        body: JSON.stringify(dataWithoutCurrency),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save expense');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save expense');
       }
 
       const savedExpense = await response.json();
@@ -220,6 +235,34 @@ export function ExpenseDialog({
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Currency</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {currencies.map((currency) => (
+                          <SelectItem key={currency.code} value={currency.code}>
+                            {currency.symbol} {currency.code} - {currency.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Select the currency for this expense
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

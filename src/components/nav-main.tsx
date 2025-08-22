@@ -1,5 +1,7 @@
 "use client"
 
+import * as React from "react"
+import Link from "next/link"
 import { ChevronRight, type LucideIcon } from "lucide-react"
 
 import {
@@ -33,18 +35,58 @@ export function NavMain({
     }[]
   }[]
 }) {
+  const STORAGE_KEY = "nav-main:open-map"
+
+  // Lazy init from localStorage to avoid first-render flicker
+  const [openMap, setOpenMap] = React.useState<Record<string, boolean>>(() => {
+    try {
+      if (typeof window === "undefined") return {}
+      const raw = localStorage.getItem(STORAGE_KEY)
+      return raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
+    } catch {
+      return {}
+    }
+  })
+
+  // Persist on change
+  React.useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(openMap))
+      }
+    } catch {
+      // no-op
+    }
+  }, [openMap])
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Financial Management</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
-          <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
+        {items.map((item) => {
+          const key = item.url || item.title
+          const isOpen = Object.prototype.hasOwnProperty.call(openMap, key)
+            ? openMap[key]
+            : !!item.isActive
+
+          return (
+            <Collapsible
+              key={item.title}
+              asChild
+              open={isOpen}
+              onOpenChange={(v) =>
+                setOpenMap((prev) => ({
+                  ...prev,
+                  [key]: v,
+                }))
+              }
+            >
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip={item.title}>
-                <a href={item.url}>
+                <Link href={item.url as any}>
                   <item.icon />
                   <span>{item.title}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
               {item.items?.length ? (
                 <>
@@ -59,9 +101,9 @@ export function NavMain({
                       {item.items?.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton asChild>
-                            <a href={subItem.url}>
+                            <Link href={subItem.url as any}>
                               <span>{subItem.title}</span>
-                            </a>
+                            </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
@@ -70,8 +112,9 @@ export function NavMain({
                 </>
               ) : null}
             </SidebarMenuItem>
-          </Collapsible>
-        ))}
+            </Collapsible>
+          )
+        })}
       </SidebarMenu>
     </SidebarGroup>
   )

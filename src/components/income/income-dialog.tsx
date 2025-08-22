@@ -412,7 +412,7 @@ export function IncomeDialog({
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                   <div className="space-y-0.5">
                     <FormLabel>Active</FormLabel>
-                    <FormDescription>Inactive income won't be included in projections</FormDescription>
+                    <FormDescription>Inactive income won&apos;t be included in projections</FormDescription>
                   </div>
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />

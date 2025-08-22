@@ -13,7 +13,9 @@ import { LoansList } from './loans-list';
 import { AddLoanDialog } from './add-loan-dialog';
 import { DebtToIncomeCard } from './debt-to-income-card';
 import { PayoffStrategiesCard } from './payoff-strategies-card';
+import { LoanCurrencyAnalysis } from './loan-currency-analysis';
 import { formatCurrency } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DebtToIncomeData {
   debtToIncomeRatio: number;
@@ -219,20 +221,37 @@ export function LoansOverview() {
         </Alert>
       )}
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <LoansList 
-            loans={loans} 
-            onLoanUpdated={fetchLoans}
-            onLoanDeleted={fetchLoans}
-          />
-        </div>
-        <div className="space-y-6">
-          <DebtToIncomeCard data={debtToIncomeData} />
+      {/* Main Content */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="currency">Currency Analysis</TabsTrigger>
+          <TabsTrigger value="strategies">Strategies</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <LoansList 
+                loans={loans} 
+                onLoanUpdated={fetchLoans}
+                onLoanDeleted={fetchLoans}
+              />
+            </div>
+            <div className="space-y-6">
+              <DebtToIncomeCard data={debtToIncomeData} />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="currency" className="space-y-6">
+          <LoanCurrencyAnalysis />
+        </TabsContent>
+
+        <TabsContent value="strategies" className="space-y-6">
           <PayoffStrategiesCard />
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
 
       <AddLoanDialog 
         open={showAddDialog}

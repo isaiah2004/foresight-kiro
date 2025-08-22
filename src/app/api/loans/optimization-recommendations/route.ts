@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { expenseService } from '@/lib/services/expense-service';
+import { loanService } from '@/lib/services/loan-service';
 import { userService } from '@/lib/services/user-service';
 
 export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth();
-    
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -15,12 +14,13 @@ export async function GET(request: NextRequest) {
     const user = await userService.getById(userId);
     const primaryCurrency = user?.preferences?.primaryCurrency || 'USD';
 
-    const analysis = await expenseService.getSpendingAnalysis(userId, primaryCurrency);
-    return NextResponse.json(analysis);
+    const recommendations = await loanService.getLoanOptimizationRecommendations(userId, primaryCurrency);
+
+    return NextResponse.json(recommendations);
   } catch (error) {
-    console.error('Error fetching expense analysis:', error);
+    console.error('Error fetching optimization recommendations:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch expense analysis' },
+      { error: 'Failed to fetch recommendations' },
       { status: 500 }
     );
   }

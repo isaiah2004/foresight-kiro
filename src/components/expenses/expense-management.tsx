@@ -11,19 +11,26 @@ import { ExpenseDialog } from './expense-dialog';
 import { ExpenseSummaryCards } from './expense-summary-cards';
 import { ExpenseChart } from './expense-chart';
 import { ExpenseAnalysis } from './expense-analysis';
-import { Expense, ExpenseCategory } from '@/types/financial';
+import { ExpenseCurrencyAnalysis } from './expense-currency-analysis';
+import { Expense, ExpenseCategory, CurrencyAmount } from '@/types/financial';
 import { toast } from '@/hooks/use-toast';
+import { useCurrency } from '@/contexts/currency-context';
 
 interface ExpenseAnalysisData {
-  totalMonthly: number;
-  fixedExpenses: number;
-  variableExpenses: number;
-  categoryBreakdown: Record<ExpenseCategory, number>;
+  totalMonthly: CurrencyAmount;
+  fixedExpenses: CurrencyAmount;
+  variableExpenses: CurrencyAmount;
+  categoryBreakdown: Record<ExpenseCategory, CurrencyAmount>;
   suggestions: string[];
+  currencyExposure?: {
+    totalCurrencies: number;
+    foreignCurrencyPercentage: number;
+  };
 }
 
 export function ExpenseManagement() {
   const { user } = useUser();
+  const { primaryCurrency } = useCurrency();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [analysis, setAnalysis] = useState<ExpenseAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +72,22 @@ export function ExpenseManagement() {
       const response = await fetch('/api/expenses/analysis');
       if (!response.ok) throw new Error('Failed to fetch analysis');
       const data = await response.json();
-      setAnalysis(data);
+      
+      // Also fetch currency exposure data
+      const currencyResponse = await fetch('/api/expenses/currency-exposure');
+      let currencyExposure = null;
+      if (currencyResponse.ok) {
+        const currencyData = await currencyResponse.json();
+        currencyExposure = {
+          totalCurrencies: currencyData.totalCurrencies,
+          foreignCurrencyPercentage: currencyData.foreignCurrencyPercentage
+        };
+      }
+      
+      setAnalysis({
+        ...data,
+        currencyExposure
+      });
     } catch (error) {
       console.error('Error fetching analysis:', error);
       setAnalysis(null);
@@ -184,6 +206,7 @@ export function ExpenseManagement() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="expenses">All Expenses</TabsTrigger>
           <TabsTrigger value="analysis">Analysis</TabsTrigger>
+          <TabsTrigger value="currency">Currency</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
         </TabsList>
 
@@ -221,7 +244,10 @@ export function ExpenseManagement() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ExpenseChart data={analysis.categoryBreakdown} />
+                  <ExpenseChart data={Object.entries(analysis.categoryBreakdown).reduce((acc, [key, value]) => {
+                    acc[key as ExpenseCategory] = value.amount;
+                    return acc;
+                  }, {} as Record<ExpenseCategory, number>)} />
                 </CardContent>
               </Card>
             )}
@@ -307,6 +333,10 @@ export function ExpenseManagement() {
           )}
         </TabsContent>
 
+        <TabsContent value="currency" className="space-y-4">
+          <ExpenseCurrencyAnalysis />
+        </TabsContent>
+
         <TabsContent value="charts" className="space-y-4">
           {analysis && (
             <div className="grid gap-4 md:grid-cols-2">
@@ -318,7 +348,10 @@ export function ExpenseManagement() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ExpenseChart data={analysis.categoryBreakdown} />
+                  <ExpenseChart data={Object.entries(analysis.categoryBreakdown).reduce((acc, [key, value]) => {
+                    acc[key as ExpenseCategory] = value.amount;
+                    return acc;
+                  }, {} as Record<ExpenseCategory, number>)} />
                 </CardContent>
               </Card>
 
@@ -332,8 +365,8 @@ export function ExpenseManagement() {
                 <CardContent>
                   <ExpenseChart 
                     data={{
-                      fixed: analysis.fixedExpenses,
-                      variable: analysis.variableExpenses
+                      fixed: analysis.fixedExpenses.amount,
+                      variable: analysis.variableExpenses.amount
                     }}
                   />
                 </CardContent>

@@ -141,7 +141,7 @@ export function IncomeCurrencyAnalysis({ userId }: IncomeCurrencyAnalysisProps) 
             <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">All Income in {primaryCurrency}</h3>
             <p className="text-muted-foreground">
-              You don't have any foreign currency income sources. Currency analysis will appear here when you add income in different currencies.
+              You don&apos;t have any foreign currency income sources. Currency analysis will appear here when you add income in different currencies.
             </p>
           </div>
         </CardContent>

@@ -15,12 +15,20 @@ export async function GET(request: NextRequest) {
     const user = await userService.getById(userId);
     const primaryCurrency = user?.preferences?.primaryCurrency || 'USD';
 
-    const analysis = await expenseService.getSpendingAnalysis(userId, primaryCurrency);
-    return NextResponse.json(analysis);
+    const currencyExposure = await expenseService.getCurrencyExposure(userId, primaryCurrency);
+
+    return NextResponse.json({
+      primaryCurrency,
+      exposures: currencyExposure,
+      totalCurrencies: currencyExposure.length,
+      foreignCurrencyPercentage: currencyExposure
+        .filter(exp => exp.currency !== primaryCurrency)
+        .reduce((sum, exp) => sum + exp.percentage, 0)
+    });
   } catch (error) {
-    console.error('Error fetching expense analysis:', error);
+    console.error('Error fetching expense currency exposure:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch expense analysis' },
+      { error: 'Failed to fetch currency exposure' },
       { status: 500 }
     );
   }

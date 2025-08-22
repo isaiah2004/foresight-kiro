@@ -385,7 +385,7 @@ export class CurrencyServiceImpl implements CurrencyService {
     const exchangeRate = await this.getExchangeRate(from, to);
     const convertedAmount = amount * exchangeRate.rate;
 
-    console.log(`Currency conversion: ${amount} ${from} → ${convertedAmount} ${to} (rate: ${exchangeRate.rate}, source: ${exchangeRate.source})`);
+    // console.log(`Currency conversion: ${amount} ${from} → ${convertedAmount} ${to} (rate: ${exchangeRate.rate}, source: ${exchangeRate.source})`);
 
     return {
       amount: convertedAmount,
@@ -788,7 +788,7 @@ export class CurrencyServiceImpl implements CurrencyService {
       const data: any = await response.json();
       
       // Debug logging to understand the actual response structure
-      console.log('Alpha Vantage API Response:', JSON.stringify(data, null, 2));
+      // console.log('Alpha Vantage API Response:', JSON.stringify(data, null, 2));
 
       // Check for API errors
       if (data['Error Message']) {

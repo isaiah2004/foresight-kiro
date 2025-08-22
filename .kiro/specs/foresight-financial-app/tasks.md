@@ -92,7 +92,6 @@
 
 - [x] 6.1 Add multi-currency support to investment portfolio
 
-
   - Update investment forms to include currency selection with auto-detection
   - Implement currency-aware investment value calculations
   - Add currency exposure analysis to portfolio summary
@@ -133,15 +132,12 @@
   - Write tests for expense calculations and analysis
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [-] 8.1 Add multi-currency support to expense tracking
-
-
-
+- [x] 8.1 Add multi-currency support to expense tracking
 
   - Update expense forms to include currency selection with location-based detection
   - Implement multi-currency expense aggregation and budget tracking
   - Add currency conversion for expense analysis and reporting
-  - Display expense breakdown by currency with exchange rate impact 
+  - Display expense breakdown by currency with exchange rate impact
   - Implement currency-aware budget alerts and recommendations
   - Write tests for multi-currency expense calculations and budget tracking
   - _Requirements: 11.2, 11.3, 11.4, 11.8, 11.9_
@@ -156,8 +152,10 @@
   - Write tests for loan calculations and payment schedules
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 9.1 Enhance loan management with multi-currency support
+- [x] 9.1 Enhance loan management with multi-currency support
 
+
+  - improve the dialog on expense managment. Use better layout and dynamic elements to enchance user expereience.
   - Add currency selection to loan forms with automatic detection based on lender location
   - Implement multi-currency loan calculations and amortization schedules
   - Add currency conversion for debt-to-income ratio calculations

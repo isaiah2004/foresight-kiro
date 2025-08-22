@@ -1,3 +1,5 @@
+import { cookies } from "next/headers"
+
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   SidebarInset,
@@ -13,14 +15,19 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
+import { PageTransition } from "@/components/ui/animations";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+
+  const cookieStore = await cookies()
+  const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
+
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2">
@@ -51,7 +58,7 @@ export default function DashboardLayout({
             className="absolute inset-0 bg-cover bg-top bg-no-repeat opacity-0 z-0"
             style={{ backgroundImage: "url('/images/fixed-wallpaper.png')" }}
           />
-          <div className="relative z-10">{children}</div>
+          <PageTransition className="relative z-10">{children}</PageTransition>
         </div>
       </SidebarInset>
     </SidebarProvider>
