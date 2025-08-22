@@ -13,7 +13,6 @@ import { LoansList } from './loans-list';
 import { AddLoanDialog } from './add-loan-dialog';
 import { DebtToIncomeCard } from './debt-to-income-card';
 import { PayoffStrategiesCard } from './payoff-strategies-card';
-import { LoanCurrencyAnalysis } from './loan-currency-analysis';
 import { formatCurrency } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -223,9 +222,8 @@ export function LoansOverview() {
 
       {/* Main Content */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="currency">Currency Analysis</TabsTrigger>
           <TabsTrigger value="strategies">Strategies</TabsTrigger>
         </TabsList>
 
@@ -242,10 +240,6 @@ export function LoansOverview() {
               <DebtToIncomeCard data={debtToIncomeData} />
             </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="currency" className="space-y-6">
-          <LoanCurrencyAnalysis />
         </TabsContent>
 
         <TabsContent value="strategies" className="space-y-6">

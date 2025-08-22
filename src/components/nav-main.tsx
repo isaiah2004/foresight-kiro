@@ -37,23 +37,29 @@ export function NavMain({
 }) {
   const STORAGE_KEY = "nav-main:open-map"
 
-  // Lazy init from localStorage to avoid first-render flicker
-  const [openMap, setOpenMap] = React.useState<Record<string, boolean>>(() => {
-    try {
-      if (typeof window === "undefined") return {}
-      const raw = localStorage.getItem(STORAGE_KEY)
-      return raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
-    } catch {
-      return {}
-    }
-  })
+  // Open-state map for collapsible sections; initialize empty to ensure SSR/CSR match
+  const [openMap, setOpenMap] = React.useState<Record<string, boolean>>({})
+  const [mounted, setMounted] = React.useState(false)
 
-  // Persist on change
+  // After mount, hydrate state from localStorage and start controlling Radix Collapsible
+  React.useEffect(() => {
+    setMounted(true)
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, boolean>
+        setOpenMap(parsed)
+      }
+    } catch {
+      // no-op
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist on change (client-only)
   React.useEffect(() => {
     try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(openMap))
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(openMap))
     } catch {
       // no-op
     }
@@ -73,13 +79,16 @@ export function NavMain({
             <Collapsible
               key={item.title}
               asChild
-              open={isOpen}
-              onOpenChange={(v) =>
-                setOpenMap((prev) => ({
-                  ...prev,
-                  [key]: v,
-                }))
-              }
+              {...(mounted
+                ? {
+                    open: isOpen,
+                    onOpenChange: (v: boolean) =>
+                      setOpenMap((prev) => ({ ...prev, [key]: v })),
+                  }
+                : {
+                    // Use defaultOpen pre-mount to keep SSR and initial client render in sync
+                    defaultOpen: isOpen,
+                  })}
             >
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip={item.title}>

@@ -1,4 +1,4 @@
-import { cookies } from "next/headers"
+"use client"
 
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -17,21 +17,23 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { PageTransition } from "@/components/ui/animations";
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-
-  const cookieStore = await cookies()
-  const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
+  // Read sidebar state cookie on the client; default to true if not set
+  const cookie = typeof document !== "undefined"
+    ? document.cookie.split("; ").find((c) => c.startsWith("sidebar_state="))
+    : undefined
+  const defaultOpen = cookie ? cookie.split("=")[1] === "true" : true
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
+    <SidebarProvider defaultOpen={defaultOpen} className="">
       <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2">
-          <div className="flex items-center gap-2 px-4">
+      <SidebarInset className="shadow-sm shadow-shadow ">
+        <header className="flex z-0 shrink-0 items-center gap-2 border-1 border-border rounded-lg mx-4 mt-4 mb-2 p-4 shadow-sm shadow-shadow ">
+          <div className="flex items-center gap-2 px-0">
             <SidebarTrigger className="-ml-1" />
             <Separator
               orientation="vertical"
@@ -52,13 +54,13 @@ export default async function DashboardLayout({
             </Breadcrumb>
           </div>
         </header>
-        <div className="py-8 px-8 m-4 rounded-lg border-border border-1 relative overflow-hidden min-h-[500px]">
+        <div className="py-8 px-8 mx-4 z-10 my-0 rounded-lg bg-background border-border border-1 shadow-sm shadow-shadow mb-4 relative overflow-hidden min-h-[500px]">
           {/* Background image with opacity */}
           <div
-            className="absolute inset-0 bg-cover bg-top bg-no-repeat opacity-0 z-0"
-            style={{ backgroundImage: "url('/images/fixed-wallpaper.png')" }}
+            className="absolute inset-0 bg-cover bg-top bg-no-repeat  z-0 "
+            // style={{ backgroundImage: "url('/images/fixed-wallpaper.png')" }}
           />
-          <PageTransition className="relative z-10">{children}</PageTransition>
+          <PageTransition className="relative ">{children}</PageTransition>
         </div>
       </SidebarInset>
     </SidebarProvider>

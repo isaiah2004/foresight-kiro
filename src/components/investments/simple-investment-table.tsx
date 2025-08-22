@@ -120,20 +120,22 @@ function SimpleInvestmentRow({ investment, onEdit, onDelete }: SimpleInvestmentR
   const validQuantity = investment.quantity || 0;
 
   return (
-    <div className="border rounded-lg p-4 space-y-2 bg-card">
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-semibold">{investment.name}</h3>
-          {investment.symbol && (
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">
-              {investment.symbol}
-            </code>
-          )}
-          <p className="text-sm text-muted-foreground capitalize">
-            {investment.type.replace("_", " ")}
-          </p>
+    <div className="border rounded-lg p-4 space-y-4 bg-card">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+        <div className="flex-1">
+          <h3 className="font-semibold text-lg">{investment.name}</h3>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            {investment.symbol && (
+              <code className="text-xs bg-muted px-2 py-1 rounded">
+                {investment.symbol}
+              </code>
+            )}
+            <span className="text-sm text-muted-foreground capitalize">
+              {investment.type.replace("_", " ")}
+            </span>
+          </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex space-x-2 flex-shrink-0">
           <Button
             variant="outline"
             size="sm"
@@ -152,7 +154,7 @@ function SimpleInvestmentRow({ investment, onEdit, onDelete }: SimpleInvestmentR
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
         <div>
           <p className="text-muted-foreground">Quantity</p>
           <p className="font-medium">

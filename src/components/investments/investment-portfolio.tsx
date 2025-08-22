@@ -11,8 +11,6 @@ import { InvestmentDialog } from "./investment-dialog";
 import { SimplePortfolioSummaryCards } from "./simple-portfolio-summary-cards";
 import { SimplePortfolioChart } from "./simple-portfolio-chart";
 import { InvestmentPortfolioSkeleton } from "./investment-portfolio-skeleton";
-import { CurrencyExposureAnalysis } from "./currency-exposure-analysis";
-import { CurrencyHedgingRecommendations } from "./currency-hedging-recommendations";
 import { Button } from "@/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -253,9 +251,9 @@ export function InvestmentPortfolio() {
       )}
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Button onClick={() => setDialogOpen(true)}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Investment
           </Button>
@@ -263,6 +261,7 @@ export function InvestmentPortfolio() {
             variant="outline"
             onClick={refreshPrices}
             disabled={refreshing}
+            className="w-full sm:w-auto"
           >
             <RefreshCw
               className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -277,8 +276,6 @@ export function InvestmentPortfolio() {
         <TabsList>
           <TabsTrigger value="table">Holdings</TabsTrigger>
           <TabsTrigger value="chart">Performance</TabsTrigger>
-          <TabsTrigger value="currency">Currency Analysis</TabsTrigger>
-          <TabsTrigger value="hedging">Hedging</TabsTrigger>
         </TabsList>
 
         <TabsContent value="table" className="space-y-4">
@@ -291,14 +288,6 @@ export function InvestmentPortfolio() {
 
         <TabsContent value="chart" className="space-y-4">
           <SimplePortfolioChart investments={investments} />
-        </TabsContent>
-
-        <TabsContent value="currency" className="space-y-4">
-          <CurrencyExposureAnalysis investments={investments} />
-        </TabsContent>
-
-        <TabsContent value="hedging" className="space-y-4">
-          <CurrencyHedgingRecommendations investments={investments} />
         </TabsContent>
       </Tabs>
 

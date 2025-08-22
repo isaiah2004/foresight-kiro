@@ -7,7 +7,7 @@ export function InvestmentPortfolioSkeleton() {
   return (
     <div className="space-y-6">
       {/* Portfolio Summary Cards Skeleton */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -23,10 +23,10 @@ export function InvestmentPortfolioSkeleton() {
       </div>
 
       {/* Action Buttons Skeleton */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-10 w-32" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+          <Skeleton className="h-10 w-full sm:w-32" />
+          <Skeleton className="h-10 w-full sm:w-32" />
         </div>
       </div>
 
@@ -53,7 +53,7 @@ export function InvestmentPortfolioSkeleton() {
                     <Skeleton className="h-9 w-12" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                   {Array.from({ length: 5 }).map((_, j) => (
                     <div key={j} className="space-y-1">
                       <Skeleton className="h-4 w-20" />
