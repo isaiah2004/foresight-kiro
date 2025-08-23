@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { InvestmentDocument, CurrencyExposure, CurrencyRiskAnalysis } from '@/types/financial';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -54,37 +54,54 @@ const CURRENCY_COLORS = {
 
 export function CurrencyExposureAnalysis({ investments }: CurrencyExposureAnalysisProps) {
   const { formatCurrency, primaryCurrency } = useCurrency();
-  const [exposureData, setExposureData] = useState<CurrencyExposure[]>([]);
-  const [riskAnalysis, setRiskAnalysis] = useState<CurrencyRiskAnalysis | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<{
+    exposureData: CurrencyExposure[];
+    riskAnalysis: CurrencyRiskAnalysis | null;
+    loading: boolean;
+  }>({ exposureData: [], riskAnalysis: null, loading: true });
+
+  // Guards to avoid setState after unmount or out-of-order updates in tests
+  const mountedRef = useRef(true);
+  const seqRef = useRef(0);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const analyzeExposure = async () => {
+      const runId = ++seqRef.current;
       try {
-        setLoading(true);
-        
-        // Calculate currency exposure
-        const exposure = await currencyService.calculateCurrencyExposure(investments);
-        setExposureData(exposure);
-        
-        // Perform risk analysis
-        const analysis = await currencyService.analyzeCurrencyRisk(investments);
-        setRiskAnalysis(analysis);
+        // set loading at once
+        setState(prev => ({ ...prev, loading: true }));
+
+        // Execute in parallel to reduce intermediate re-renders
+        const [exposure, analysis] = await Promise.all([
+          currencyService.calculateCurrencyExposure(investments),
+          currencyService.analyzeCurrencyRisk(investments),
+        ]);
+
+        if (!mountedRef.current || runId !== seqRef.current) return;
+        // Single state update to avoid multiple act warnings
+        setState({ exposureData: exposure, riskAnalysis: analysis, loading: false });
       } catch (error) {
-        console.error('Error analyzing currency exposure:', error);
-      } finally {
-        setLoading(false);
+        if (process.env.NODE_ENV !== 'test') {
+          console.error('Error analyzing currency exposure:', error);
+        }
+        if (!mountedRef.current || runId !== seqRef.current) return;
+        setState(prev => ({ ...prev, loading: false }));
       }
     };
 
     if (investments.length > 0) {
       analyzeExposure();
     } else {
-      setExposureData([]);
-      setRiskAnalysis(null);
-      setLoading(false);
+      setState({ exposureData: [], riskAnalysis: null, loading: false });
     }
   }, [investments]);
+
+  const { exposureData, riskAnalysis, loading } = state;
 
   if (loading) {
     return (

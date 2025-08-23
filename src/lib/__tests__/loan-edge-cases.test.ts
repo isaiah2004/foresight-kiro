@@ -21,13 +21,13 @@ describe('Loan Edge Cases', () => {
       jest.spyOn(loanService, 'getAllOrdered').mockResolvedValue([]);
 
       const activeLoans = await loanService.getActiveLoans('test-user');
-      const totalDebt = await loanService.getTotalDebt('test-user');
-      const totalPayments = await loanService.getTotalMonthlyPayments('test-user');
+  const totalDebt = await loanService.getTotalDebt('test-user');
+  const totalPayments = await loanService.getTotalMonthlyPayments('test-user');
       const strategies = await loanService.getDebtPayoffStrategies('test-user');
 
       expect(activeLoans).toEqual([]);
-      expect(totalDebt).toBe(0);
-      expect(totalPayments).toBe(0);
+  expect(totalDebt.amount).toBe(0);
+  expect(totalPayments.amount).toBe(0);
       expect(strategies.snowball.order).toEqual([]);
       expect(strategies.avalanche.order).toEqual([]);
     });
@@ -36,12 +36,12 @@ describe('Loan Edge Cases', () => {
       jest.spyOn(loanService, 'getAllOrdered').mockRejectedValue(new Error('Database error'));
 
       const activeLoans = await loanService.getActiveLoans('test-user');
-      const totalDebt = await loanService.getTotalDebt('test-user');
-      const totalPayments = await loanService.getTotalMonthlyPayments('test-user');
+  const totalDebt = await loanService.getTotalDebt('test-user');
+  const totalPayments = await loanService.getTotalMonthlyPayments('test-user');
 
       expect(activeLoans).toEqual([]);
-      expect(totalDebt).toBe(0);
-      expect(totalPayments).toBe(0);
+  expect(totalDebt.amount).toBe(0);
+  expect(totalPayments.amount).toBe(0);
     });
   });
 
@@ -272,7 +272,7 @@ describe('Loan Edge Cases', () => {
         'test-user',
         'test-loan',
         expect.objectContaining({
-          currentBalance: 0, // Should not go negative
+          currentBalance: { amount: 0, currency: 'USD' }, // Should not go negative
         })
       );
     });

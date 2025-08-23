@@ -295,9 +295,10 @@ describe('Income Multi-Currency API Routes', () => {
       mockAuth.mockRejectedValue(new Error('Auth service down'));
 
       const request = new NextRequest('http://localhost/api/income/currency-exposure');
-      
-      // Should handle auth errors gracefully
-      await expect(getCurrencyExposure(request)).rejects.toThrow('Auth service down');
+      const response = await getCurrencyExposure(request);
+      const data = await response.json();
+      expect(response.status).toBe(500);
+      expect(data.error).toContain('Failed to fetch');
     });
   });
 

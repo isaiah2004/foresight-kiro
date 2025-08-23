@@ -28,7 +28,12 @@ jest.mock('../../firebase-service', () => ({
       return mockInvestments;
     }
     
-    async getFiltered() {
+    async getFiltered(_userId?: string, filters?: any[]) {
+      if (!filters || filters.length === 0) return mockInvestments;
+      const typeFilter = filters.find(f => f.field === 'type' && f.operator === '==');
+      if (typeFilter) {
+        return mockInvestments.filter(inv => inv.type === typeFilter.value);
+      }
       return mockInvestments;
     }
     
@@ -40,6 +45,10 @@ jest.mock('../../firebase-service', () => ({
       return;
     }
     
+    async getById(_userId: string, id: string) {
+      return mockInvestments.find(inv => inv.id === id) || null;
+    }
+
     async delete() {
       return;
     }
@@ -103,10 +112,10 @@ describe('InvestmentService', () => {
       // Bitcoin: 0.5 * 45000 = 22500 (current), 0.5 * 40000 = 20000 (cost), gain = 2500
       // Total: 34450 (current), 31500 (cost), gain = 2950
 
-      expect(summary.totalValue).toBe(34450);
-      expect(summary.totalGainLoss).toBe(2950);
+  expect(summary.totalValue.amount).toBe(34450);
+  expect(summary.totalGainLoss.amount).toBe(2950);
       expect(summary.gainLossPercentage).toBeCloseTo(9.37, 1);
-      expect(summary.diversificationScore).toBe(50); // 3 out of 6 types = 50%
+  expect(summary.diversificationScore).toBe(37.5); // 3 out of 8 types = 37.5%
       expect(summary.riskLevel).toBe('high'); // Has crypto > 20%
     });
 
@@ -122,8 +131,8 @@ describe('InvestmentService', () => {
       const summary = await investmentService.getPortfolioSummary('user1', 'USD');
 
       // Should use purchase prices
-      expect(summary.totalValue).toBe(31500); // Sum of cost basis
-      expect(summary.totalGainLoss).toBe(0);
+  expect(summary.totalValue.amount).toBe(31500); // Sum of cost basis
+  expect(summary.totalGainLoss.amount).toBe(0);
       expect(summary.gainLossPercentage).toBe(0);
     });
 
@@ -154,8 +163,8 @@ describe('InvestmentService', () => {
 
       const summary = await investmentService.getPortfolioSummary('user1', 'USD');
 
-      expect(summary.totalValue).toBe(0);
-      expect(summary.totalGainLoss).toBe(0);
+  expect(summary.totalValue.amount).toBe(0);
+  expect(summary.totalGainLoss.amount).toBe(0);
       expect(summary.gainLossPercentage).toBe(0);
       expect(summary.diversificationScore).toBe(0);
       expect(summary.riskLevel).toBe('low');
@@ -166,8 +175,9 @@ describe('InvestmentService', () => {
     it('should filter investments by type', async () => {
       const result = await investmentService.getByType('user1', 'stocks');
       
-      // Should call getFiltered with correct parameters
-      expect(result).toEqual(mockInvestments);
+  // Should return only stocks
+  expect(result.every(r => r.type === 'stocks')).toBe(true);
+  expect(result.length).toBeGreaterThan(0);
     });
   });
 
@@ -181,7 +191,7 @@ describe('InvestmentService', () => {
 
   describe('updateCurrentPrice', () => {
     it('should update investment current price', async () => {
-      await investmentService.updateCurrentPrice('user1', '1', 180);
+  await investmentService.updateCurrentPrice('user1', '1', 180);
       
       // Should call update with correct parameters
       // This would be verified through the mock implementation

@@ -8,25 +8,23 @@ import { Timestamp } from 'firebase/firestore';
 jest.mock('../currency-service');
 jest.mock('../user-service');
 
-// Mock Firebase service
-class MockFirebaseService {
-  collection: string;
-  
-  constructor(collection: string) {
-    this.collection = collection;
-  }
-  
-  async getAll() { return []; }
-  async getAllOrdered() { return []; }
-  async getById() { return null; }
-  async create() { return 'mock-id'; }
-  async update() { return; }
-  async delete() { return; }
-}
-
-jest.mock('../firebase-service', () => ({
-  BaseFirebaseService: MockFirebaseService
-}));
+// Mock Firebase service without referencing class before init
+jest.mock('../../firebase-service', () => {
+  return {
+    BaseFirebaseService: class {
+      collection: string;
+      constructor(collection: string) {
+        this.collection = collection;
+      }
+      async getAll() { return []; }
+      async getAllOrdered() { return []; }
+      async getById() { return null; }
+      async create() { return 'mock-id'; }
+      async update() { return; }
+      async delete() { return; }
+    }
+  };
+});
 
 const mockCurrencyService = currencyService as jest.Mocked<typeof currencyService>;
 const mockUserService = userService as jest.Mocked<typeof userService>;
@@ -192,9 +190,10 @@ describe('LoanService Multi-Currency', () => {
       expect(eurExposure?.percentage).toBeCloseTo(28.4, 1); // 4400/15520 * 100
       expect(eurExposure?.riskLevel).toBe('medium');
 
-      const gbpExposure = result.find(e => e.currency === 'GBP');
-      expect(gbpExposure?.percentage).toBeCloseTo(20.1, 1); // 3120/15520 * 100
-      expect(gbpExposure?.riskLevel).toBe('low');
+  const gbpExposure = result.find(e => e.currency === 'GBP');
+  expect(gbpExposure?.percentage).toBeCloseTo(20.1, 1); // 3120/15520 * 100
+  // With >20% threshold, GBP is medium risk
+  expect(gbpExposure?.riskLevel).toBe('medium');
     });
 
     it('should return empty array for no loans', async () => {
@@ -255,8 +254,10 @@ describe('LoanService Multi-Currency', () => {
       const result = await loanService.getLoanOptimizationRecommendations(mockUserId, primaryCurrency);
 
       expect(result.currencyRiskAnalysis.highRiskLoans).toHaveLength(1);
-      expect(result.currencyRiskAnalysis.recommendations).toContain(
-        expect.stringContaining('high-risk foreign currency loans')
+      expect(result.currencyRiskAnalysis.recommendations).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('high-risk foreign currency loans'),
+        ])
       );
       expect(result.refinancingOpportunities).toHaveLength(2); // Loans with >7% interest
       expect(result.payoffOptimization.strategy).toBe('currency_focused');

@@ -64,7 +64,9 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error detecting currency:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error detecting currency:', error);
+    }
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -2,6 +2,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExpenseTable } from '../expense-table';
 import { Expense } from '@/types/financial';
 import { Timestamp } from 'firebase/firestore';
+// Mock currency context used inside table rows
+jest.mock('@/contexts/currency-context', () => ({
+  useCurrency: jest.fn(),
+}));
+import { useCurrency } from '@/contexts/currency-context';
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -38,6 +43,16 @@ describe('ExpenseTable', () => {
     (fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({}),
+    });
+    // Provide a stable currency context
+    (useCurrency as jest.Mock).mockReturnValue({
+      primaryCurrency: 'USD',
+      currencies: [],
+      isLoading: false,
+      convertAmount: jest.fn(async (amount: number) => ({ amount, currency: 'USD' })),
+      formatCurrency: jest.fn((amount: number) => `$${amount.toFixed(2)}`),
+      formatCurrencyAmount: jest.fn((ca: { amount: number }) => `$${ca.amount.toFixed(2)}`),
+      refreshCurrency: jest.fn(),
     });
   });
 
@@ -162,7 +177,8 @@ describe('ExpenseTable', () => {
       />
     );
 
-    expect(screen.getAllByText('$1,200.00')).toHaveLength(2); // Amount and monthly columns
+  // Our mock formatter uses toFixed(2) without separators
+  expect(screen.getAllByText('$1200.00')).toHaveLength(2); // Amount and monthly columns
     expect(screen.getByText('$100.00')).toBeInTheDocument();
   });
 
@@ -175,8 +191,8 @@ describe('ExpenseTable', () => {
       />
     );
 
-    // Monthly rent should show as $1,200.00 in both amount and monthly columns
-    expect(screen.getAllByText('$1,200.00')).toHaveLength(2);
+  // Monthly rent should show as $1200.00 in both amount and monthly columns
+  expect(screen.getAllByText('$1200.00')).toHaveLength(2);
     
     // Weekly groceries should show monthly equivalent (~$433.33)
     expect(screen.getByText('$433.33')).toBeInTheDocument();

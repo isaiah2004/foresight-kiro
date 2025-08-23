@@ -40,7 +40,9 @@ export function safeFormatDate(dateValue: any): string {
     
     return date.toLocaleDateString();
   } catch (error) {
-    console.error('Error formatting date:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error formatting date:', error);
+    }
     return new Date().toLocaleDateString();
   }
 }
@@ -70,7 +72,9 @@ export function safeToDateString(dateValue: any): string {
     
     return date.toISOString().split('T')[0];
   } catch (error) {
-    console.error('Error converting date to string:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error converting date to string:', error);
+    }
     return new Date().toISOString().split('T')[0];
   }
 }

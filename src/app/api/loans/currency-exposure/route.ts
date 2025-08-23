@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(currencyExposure);
   } catch (error) {
-    console.error('Error fetching loan currency exposure:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error fetching loan currency exposure:', error);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch currency exposure' },
       { status: 500 }

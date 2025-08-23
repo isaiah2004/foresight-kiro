@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(projections);
   } catch (error) {
-    console.error('Error fetching currency projections:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error fetching currency projections:', error);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch currency projections' },
       { status: 500 }

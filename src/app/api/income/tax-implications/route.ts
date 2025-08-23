@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(taxImplications);
   } catch (error) {
-    console.error('Error fetching tax implications:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error fetching tax implications:', error);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch tax implications' },
       { status: 500 }

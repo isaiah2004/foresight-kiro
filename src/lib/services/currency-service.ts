@@ -220,14 +220,16 @@ export class CurrencyServiceImpl implements CurrencyService {
   private readonly API_BASE_URL = 'https://www.alphavantage.co/query';
   private readonly API_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'demo';
   private readonly USE_MOCK_RATES = !process.env.ALPHA_VANTAGE_API_KEY || process.env.ALPHA_VANTAGE_API_KEY === 'demo';
-  private readonly MAX_RETRIES = 3;
-  private readonly RETRY_DELAY_MS = 1000;
+  private readonly MAX_RETRIES = parseInt(process.env.EXCHANGE_MAX_RETRIES || '3', 10);
+  private readonly RETRY_DELAY_MS = parseInt(process.env.EXCHANGE_RETRY_DELAY_MS || '1000', 10);
 
   // Clear cache to force fresh rates
   clearCache(): void {
     this.exchangeRateCache = {};
     this.lastCacheUpdate = new Date(0); // Force cache refresh
-    console.log('Currency cache cleared - fresh rates will be fetched');
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('Currency cache cleared - fresh rates will be fetched');
+    }
   }
 
   async getExchangeRate(from: string, to: string): Promise<ExchangeRate> {
@@ -262,7 +264,9 @@ export class CurrencyServiceImpl implements CurrencyService {
 
     // If we're using demo key or no API key, skip API and use mock rates directly
     if (this.USE_MOCK_RATES) {
-      console.log(`Using mock exchange rate for ${from} to ${to} (no valid API key)`);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`Using mock exchange rate for ${from} to ${to} (no valid API key)`);
+      }
       const mockRate = this.getMockExchangeRate(from, to);
       return {
         from,
@@ -274,15 +278,17 @@ export class CurrencyServiceImpl implements CurrencyService {
     }
 
     try {
-      // Fetch from API with retry logic
-      const rate = await this.fetchExchangeRateWithRetry(from, to);
+      // Fetch from API with retry logic (may fall back to mock)
+      const result = await this.fetchExchangeRateWithRetry(from, to);
+      const rate = typeof result === 'number' ? result : result.rate;
+      const source = typeof result === 'number' ? 'api' : result.source;
       const timestamp = new Date();
 
-      // Update cache
+      // Update cache with actual source used
       this.exchangeRateCache[cacheKey] = {
         rate,
         timestamp,
-        source: 'api'
+        source
       };
 
       return {
@@ -290,12 +296,14 @@ export class CurrencyServiceImpl implements CurrencyService {
         to,
         rate,
         timestamp,
-        source: 'api'
+        source
       };
     } catch (error) {
       // Fallback to cached rate if available (even if stale)
       if (cached) {
-        console.warn(`Using stale exchange rate for ${from}-${to}:`, error);
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn(`Using stale exchange rate for ${from}-${to}:`, error);
+        }
         return {
           from,
           to,
@@ -306,7 +314,9 @@ export class CurrencyServiceImpl implements CurrencyService {
       }
 
       // Last resort: use mock rate
-      console.error(`Failed to fetch exchange rate for ${from}-${to}, using fallback:`, error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error(`Failed to fetch exchange rate for ${from}-${to}, using fallback:`, error);
+      }
       const fallbackRate = this.getMockExchangeRate(from, to);
       return {
         from,
@@ -374,7 +384,9 @@ export class CurrencyServiceImpl implements CurrencyService {
 
       return rates.sort((a, b) => a.date.getTime() - b.date.getTime());
     } catch (error) {
-      console.error(`Failed to fetch historical rates for ${from}-${to}:`, error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error(`Failed to fetch historical rates for ${from}-${to}:`, error);
+      }
 
       // Fallback to mock historical data
       return this.generateMockHistoricalRates(from, to, startDate, endDate);
@@ -382,14 +394,17 @@ export class CurrencyServiceImpl implements CurrencyService {
   }
 
   async convertAmount(amount: number, from: string, to: string): Promise<CurrencyAmount> {
-    const exchangeRate = await this.getExchangeRate(from, to);
+  // Normalize inputs to ensure consistent return shapes
+  const fromCode = this.normalizeCurrencyCode(from);
+  const toCode = this.normalizeCurrencyCode(to);
+  const exchangeRate = await this.getExchangeRate(fromCode, toCode);
     const convertedAmount = amount * exchangeRate.rate;
 
     // console.log(`Currency conversion: ${amount} ${from} → ${convertedAmount} ${to} (rate: ${exchangeRate.rate}, source: ${exchangeRate.source})`);
 
     return {
       amount: convertedAmount,
-      currency: to,
+      currency: toCode,
       convertedAmount,
       exchangeRate: exchangeRate.rate,
       lastUpdated: exchangeRate.timestamp
@@ -503,6 +518,10 @@ export class CurrencyServiceImpl implements CurrencyService {
     }
 
     try {
+  // Validate locale to ensure fallback works for invalid locales
+  if (locale && (!this.isLikelyValidLocaleTag(locale) || !this.isValidLocale(locale))) {
+        throw new RangeError('Invalid locale');
+      }
       return new Intl.NumberFormat(locale, {
         style: 'currency',
         currency: amount.currency,
@@ -566,6 +585,9 @@ export class CurrencyServiceImpl implements CurrencyService {
     const formatLocale = locale || this.getLocaleForCurrency(currency);
 
     try {
+  if (formatLocale && (!this.isLikelyValidLocaleTag(formatLocale) || !this.isValidLocale(formatLocale))) {
+        throw new RangeError('Invalid locale');
+      }
       return new Intl.NumberFormat(formatLocale, {
         style: 'currency',
         currency: currency,
@@ -749,15 +771,18 @@ export class CurrencyServiceImpl implements CurrencyService {
     return 'high';
   }
 
-  private async fetchExchangeRateWithRetry(from: string, to: string): Promise<number> {
+  private async fetchExchangeRateWithRetry(from: string, to: string): Promise<number | { rate: number; source: 'api' | 'mock' }> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
       try {
-        return await this.fetchExchangeRateFromAPI(from, to);
+        const rate = await this.fetchExchangeRateFromAPI(from, to);
+        return { rate, source: 'api' };
       } catch (error) {
         lastError = error as Error;
-        console.warn(`Exchange rate fetch attempt ${attempt} failed:`, error);
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn(`Exchange rate fetch attempt ${attempt} failed:`, error);
+        }
 
         if (attempt < this.MAX_RETRIES) {
           await this.delay(this.RETRY_DELAY_MS * attempt);
@@ -766,11 +791,15 @@ export class CurrencyServiceImpl implements CurrencyService {
     }
 
     // If all API attempts failed, try to use mock rate as fallback
-    console.warn(`All API attempts failed for ${from} to ${to}, falling back to mock rate`);
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn(`All API attempts failed for ${from} to ${to}, falling back to mock rate`);
+    }
     const mockRate = this.getMockExchangeRate(from, to);
     if (mockRate !== null) {
-      console.log(`Using mock exchange rate: 1 ${from} = ${mockRate} ${to}`);
-      return mockRate;
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`Using mock exchange rate: 1 ${from} = ${mockRate} ${to}`);
+      }
+      return { rate: mockRate, source: 'mock' };
     }
 
     throw lastError || new Error('All API attempts failed and no mock rate available');
@@ -801,7 +830,9 @@ export class CurrencyServiceImpl implements CurrencyService {
 
       // Check if we have the expected response structure
       if (!data['Realtime Currency Exchange Rate']) {
-        console.error('Unexpected Alpha Vantage response structure:', data);
+        if (process.env.NODE_ENV !== 'test') {
+          console.error('Unexpected Alpha Vantage response structure:', data);
+        }
         throw new Error('Invalid response format from Alpha Vantage API');
       }
 
@@ -814,7 +845,9 @@ export class CurrencyServiceImpl implements CurrencyService {
 
       return rate;
     } catch (error) {
-      console.warn('Alpha Vantage API failed:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn('Alpha Vantage API failed:', error);
+      }
       throw error; // Let retry logic handle fallback
     }
   }
@@ -876,7 +909,9 @@ export class CurrencyServiceImpl implements CurrencyService {
 
       return rate;
     } catch (error) {
-      console.warn(`Failed to fetch historical rate for ${dateString}:`, error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn(`Failed to fetch historical rate for ${dateString}:`, error);
+      }
       throw error;
     }
   }
@@ -962,6 +997,21 @@ export class CurrencyServiceImpl implements CurrencyService {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private isValidLocale(locale: string): boolean {
+    try {
+      // Throws RangeError for invalid locales per spec
+      return Intl.getCanonicalLocales(locale).length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  // Quick BCP-47 sanity check to avoid accepting clearly invalid tags like 'invalid-locale'
+  // Accepts patterns like 'en', 'en-US', 'de-DE', 'ja-JP'
+  private isLikelyValidLocaleTag(locale: string): boolean {
+    return /^[a-zA-Z]{2,3}(-[A-Za-z]{2}|-[A-Za-z]{4}|-[A-Za-z]{2,8})?$/.test(locale);
   }
 }
 

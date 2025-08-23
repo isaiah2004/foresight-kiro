@@ -42,7 +42,7 @@ describe('ExpenseCurrencyAnalysis', () => {
     );
 
     expect(screen.getByText('Currency Analysis')).toBeInTheDocument();
-    expect(screen.getByRole('generic', { name: /loading/i })).toBeInTheDocument();
+    expect(screen.getByTestId('loading')).toBeInTheDocument();
   });
 
   it('renders no currency exposure message when all expenses are in primary currency', async () => {
@@ -109,23 +109,22 @@ describe('ExpenseCurrencyAnalysis', () => {
       },
     };
 
-    (fetch as jest.Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockExposureData,
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockProjectionsData,
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+    (fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/expenses/currency-exposure')) {
+        return Promise.resolve({ ok: true, json: async () => mockExposureData });
+      }
+      if (url.includes('/api/expenses/multi-currency-projections')) {
+        return Promise.resolve({ ok: true, json: async () => mockProjectionsData });
+      }
+      if (url.includes('/api/expenses/budget-alerts')) {
+        return Promise.resolve({ ok: true, json: async () => ({
           alerts: [],
           summary: { total: 0, danger: 0, warning: 0, info: 0 },
           recommendations: [],
-        }),
-      });
+        }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
 
     render(
       <MockCurrencyProvider>
@@ -160,14 +159,28 @@ describe('ExpenseCurrencyAnalysis', () => {
   });
 
   it('displays refresh button and handles refresh action', async () => {
-    (fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        primaryCurrency: 'USD',
-        exposures: [],
-        totalCurrencies: 1,
-        foreignCurrencyPercentage: 0,
-      }),
+    (fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/expenses/currency-exposure')) {
+        return Promise.resolve({ ok: true, json: async () => ({
+          primaryCurrency: 'USD',
+          exposures: [
+            { currency: 'USD', totalValue: { amount: 2000, currency: 'USD' }, percentage: 100, riskLevel: 'low' as const },
+          ],
+          totalCurrencies: 1,
+          foreignCurrencyPercentage: 0,
+        }) });
+      }
+      if (url.includes('/api/expenses/multi-currency-projections')) {
+        return Promise.resolve({ ok: true, json: async () => ({
+          primaryCurrency: 'USD',
+          projections: [],
+          summary: { averageMonthlyExpense: 0, totalProjectedExpense: 0, currenciesInvolved: [] },
+        }) });
+      }
+      if (url.includes('/api/expenses/budget-alerts')) {
+        return Promise.resolve({ ok: true, json: async () => ({ alerts: [], summary: { total: 0, danger: 0, warning: 0, info: 0 }, recommendations: [] }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     render(
@@ -182,21 +195,28 @@ describe('ExpenseCurrencyAnalysis', () => {
   });
 
   it('renders all tabs correctly', async () => {
-    (fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        primaryCurrency: 'USD',
-        exposures: [
-          {
-            currency: 'USD',
-            totalValue: { amount: 2000, currency: 'USD' },
-            percentage: 100,
-            riskLevel: 'low' as const,
-          },
-        ],
-        totalCurrencies: 1,
-        foreignCurrencyPercentage: 0,
-      }),
+    (fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/expenses/currency-exposure')) {
+        return Promise.resolve({ ok: true, json: async () => ({
+          primaryCurrency: 'USD',
+          exposures: [
+            { currency: 'USD', totalValue: { amount: 2000, currency: 'USD' }, percentage: 100, riskLevel: 'low' as const },
+          ],
+          totalCurrencies: 1,
+          foreignCurrencyPercentage: 0,
+        }) });
+      }
+      if (url.includes('/api/expenses/multi-currency-projections')) {
+        return Promise.resolve({ ok: true, json: async () => ({
+          primaryCurrency: 'USD',
+          projections: [],
+          summary: { averageMonthlyExpense: 0, totalProjectedExpense: 0, currenciesInvolved: ['USD'] },
+        }) });
+      }
+      if (url.includes('/api/expenses/budget-alerts')) {
+        return Promise.resolve({ ok: true, json: async () => ({ alerts: [], summary: { total: 0, danger: 0, warning: 0, info: 0 }, recommendations: [] }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     render(

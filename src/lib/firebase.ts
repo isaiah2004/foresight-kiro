@@ -17,7 +17,16 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firestore
 export const db = getFirestore(app);
 
-// Initialize Auth
-export const auth = getAuth(app);
+// Initialize Auth only in the browser to avoid persistence errors in Node/Jest environments
+let authInstance: ReturnType<typeof getAuth> | undefined;
+try {
+  if (typeof window !== 'undefined') {
+    authInstance = getAuth(app);
+  }
+} catch {
+  // In non-browser/test environments, silently skip auth initialization
+}
+
+export const auth = authInstance as any;
 
 export default app;

@@ -3,6 +3,18 @@ import "@testing-library/jest-dom";
 import { DashboardCards } from "../dashboard-cards";
 import { DashboardMetrics } from "@/lib/dashboard-calculations";
 
+// Mock currency context used by CurrencyDisplay
+jest.mock("@/contexts/currency-context", () => ({
+  useCurrency: jest.fn(),
+}));
+import { useCurrency } from "@/contexts/currency-context";
+// Render amounts synchronously with USD, no decimals
+jest.mock("@/components/currency/currency-display", () => ({
+  CurrencyDisplay: ({ amount }: { amount: number }) => (
+    <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount)}</span>
+  ),
+}));
+
 // Mock data for testing
 const mockMetrics: DashboardMetrics = {
   netWorth: 50000,
@@ -44,6 +56,22 @@ const mockPoorMetrics: DashboardMetrics = {
 };
 
 describe("DashboardCards", () => {
+  beforeEach(() => {
+    const mockFormatUSD = (amount: number) =>
+      `$${Math.round(amount).toLocaleString("en-US")}`;
+    (useCurrency as jest.Mock).mockReturnValue({
+      primaryCurrency: "USD",
+      currencies: [],
+      isLoading: false,
+      // Return same amount in USD to keep tests deterministic
+      convertAmount: jest.fn(async (amount: number) => ({ amount, currency: "USD" })),
+      formatCurrency: jest.fn((amount: number) => mockFormatUSD(amount)),
+      formatCurrencyAmount: jest.fn((currencyAmount: { amount: number }) =>
+        mockFormatUSD(currencyAmount.amount)
+      ),
+      refreshCurrency: jest.fn(),
+    });
+  });
   it("renders all dashboard cards with correct data", () => {
     render(<DashboardCards metrics={mockMetrics} />);
 
@@ -55,8 +83,9 @@ describe("DashboardCards", () => {
     // Check Monthly Cash Flow card
     expect(screen.getByText("Monthly Cash Flow")).toBeInTheDocument();
     expect(screen.getByText("$5,000")).toBeInTheDocument(); // 8000 - 3000
-    expect(screen.getByText(/Income: \$8,000/)).toBeInTheDocument();
-    expect(screen.getByText(/Expenses: \$3,000/)).toBeInTheDocument();
+  // Currency values are rendered via components; assert values separately
+  expect(screen.getByText('$8,000')).toBeInTheDocument();
+  expect(screen.getByText('$3,000')).toBeInTheDocument();
 
     // Check Portfolio Value card
     expect(screen.getByText("Portfolio Value")).toBeInTheDocument();
@@ -85,11 +114,14 @@ describe("DashboardCards", () => {
 
     expect(screen.getByText("Goal Progress")).toBeInTheDocument();
     expect(screen.getByText("Emergency Fund")).toBeInTheDocument();
-    expect(screen.getByText("$6,000 / $10,000")).toBeInTheDocument();
+  // Two CurrencyDisplay instances around a slash; match pieces instead of full string
+  expect(screen.getByText("$6,000")).toBeInTheDocument();
+  expect(screen.getByText("$10,000")).toBeInTheDocument();
     expect(screen.getByText("60.0% complete")).toBeInTheDocument();
 
     expect(screen.getByText("Retirement")).toBeInTheDocument();
-    expect(screen.getByText("$25,000 / $100,000")).toBeInTheDocument();
+  expect(screen.getByText("$25,000")).toBeInTheDocument();
+  expect(screen.getByText("$100,000")).toBeInTheDocument();
     expect(screen.getByText("25.0% complete")).toBeInTheDocument();
   });
 
@@ -102,14 +134,14 @@ describe("DashboardCards", () => {
   it("handles negative net worth correctly", () => {
     render(<DashboardCards metrics={mockPoorMetrics} />);
 
-    expect(screen.getByText("-$5,000")).toBeInTheDocument();
+  expect(screen.getByText("-$5,000")).toBeInTheDocument();
     expect(screen.getByText("Negative net worth")).toBeInTheDocument();
   });
 
   it("handles negative cash flow correctly", () => {
     render(<DashboardCards metrics={mockPoorMetrics} />);
 
-    expect(screen.getByText("-$500")).toBeInTheDocument(); // 4000 - 4500
+  expect(screen.getByText("-$500")).toBeInTheDocument(); // 4000 - 4500
   });
 
   it("shows warning for high debt-to-income ratio", () => {
@@ -204,7 +236,7 @@ describe("DashboardCards", () => {
 
     render(<DashboardCards metrics={metricsWithLargeNumbers} />);
 
-    expect(screen.getByText("$1,234,567")).toBeInTheDocument();
+  expect(screen.getByText("$1,234,567")).toBeInTheDocument();
     expect(screen.getByText("$987,654")).toBeInTheDocument();
     expect(screen.getByText("$54,321")).toBeInTheDocument();
   });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { currencyService } from '@/lib/services/currency-service';
 import type { Currency, CurrencyAmount } from '@/types/financial';
 
@@ -24,10 +24,12 @@ export function CurrencyProvider({ children }: CurrencyProviderProps) {
   const [primaryCurrency, setPrimaryCurrency] = useState<string>('USD');
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isMounted = useRef(true);
 
   // Load initial currency data
   const loadCurrencyData = useCallback(async () => {
     try {
+      if (!isMounted.current) return;
       setIsLoading(true);
       
       // Load user preferences and supported currencies in parallel
@@ -37,27 +39,36 @@ export function CurrencyProvider({ children }: CurrencyProviderProps) {
       ]);
       
       // Set supported currencies
+      if (!isMounted.current) return;
       setCurrencies(supportedCurrencies);
       
       // Set primary currency from user preferences
       if (preferencesResponse?.ok) {
         const { preferences } = await preferencesResponse.json();
+        if (!isMounted.current) return;
         setPrimaryCurrency(preferences?.primaryCurrency || 'USD');
       } else {
+        if (!isMounted.current) return;
         setPrimaryCurrency('USD'); // Default fallback
       }
     } catch (error) {
       console.error('Error loading currency data:', error);
+      if (!isMounted.current) return;
       setPrimaryCurrency('USD');
       setCurrencies([]);
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
     }
   }, []);
 
   // Load data on mount
   useEffect(() => {
+    isMounted.current = true;
     loadCurrencyData();
+    return () => {
+      isMounted.current = false;
+    };
   }, [loadCurrencyData]);
 
   // Convert amount to user's primary currency (or specified currency)

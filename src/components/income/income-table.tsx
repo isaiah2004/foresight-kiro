@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MoreHorizontal, Edit, Trash2, DollarSign, TrendingUp, PauseCircle, PlayCircle, Globe } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -58,9 +58,13 @@ function IncomeRow({
   onAddRaise?: (income: IncomeDocument) => void;
 }) {
   const { formatCurrency, convertAmount, primaryCurrency } = useCurrency();
-  const [convertedAmount, setConvertedAmount] = useState<CurrencyAmount | null>(null);
-  const [convertedMonthly, setConvertedMonthly] = useState<CurrencyAmount | null>(null);
-  const [isConverting, setIsConverting] = useState(false);
+  const [conversionState, setConversionState] = useState<{
+    amount: CurrencyAmount | null;
+    monthly: CurrencyAmount | null;
+    loading: boolean;
+  }>({ amount: null, monthly: null, loading: false });
+  const mountedRef = useRef(true);
+  const seqRef = useRef(0);
 
   const convertToMonthly = (amount: number, frequency: string): number => {
     switch (frequency) {
@@ -80,47 +84,70 @@ function IncomeRow({
   };
 
   useEffect(() => {
+    mountedRef.current = true;
+    const seq = ++seqRef.current;
+
     const performConversion = async () => {
+      // Same-currency: no async call, update once
       if (income.amount.currency === primaryCurrency) {
-        // No conversion needed
-        setConvertedAmount({
-          amount: income.amount.amount,
-          currency: primaryCurrency
-        });
-        setConvertedMonthly({
-          amount: convertToMonthly(income.amount.amount, income.frequency),
-          currency: primaryCurrency
+        if (!mountedRef.current || seq !== seqRef.current) return;
+        setConversionState({
+          amount: { amount: income.amount.amount, currency: primaryCurrency },
+          monthly: {
+            amount: convertToMonthly(income.amount.amount, income.frequency),
+            currency: primaryCurrency,
+          },
+          loading: false,
         });
         return;
       }
 
-      setIsConverting(true);
+      // Show loading state promptly
+      if (mountedRef.current && seq === seqRef.current) {
+        setConversionState((s) => ({ ...s, loading: true }));
+      }
+
       try {
         // Convert original amount
-        const converted = await convertAmount(income.amount.amount, income.amount.currency, primaryCurrency);
-        setConvertedAmount(converted);
+        const converted = await convertAmount(
+          income.amount.amount,
+          income.amount.currency,
+          primaryCurrency
+        );
 
         // Convert monthly equivalent
         const monthlyAmount = convertToMonthly(income.amount.amount, income.frequency);
-        const convertedMonthlyAmount = await convertAmount(monthlyAmount, income.amount.currency, primaryCurrency);
-        setConvertedMonthly(convertedMonthlyAmount);
+        const convertedMonthlyAmount = await convertAmount(
+          monthlyAmount,
+          income.amount.currency,
+          primaryCurrency
+        );
+
+        if (!mountedRef.current || seq !== seqRef.current) return;
+        setConversionState({ amount: converted, monthly: convertedMonthlyAmount, loading: false });
       } catch (error) {
-        console.error('Currency conversion failed:', error);
+        if (process.env.NODE_ENV !== 'test') {
+          // Reduce noisy logs in tests, but keep visibility in dev/prod
+          console.error('Currency conversion failed:', error);
+        }
+        if (!mountedRef.current || seq !== seqRef.current) return;
         // Fallback to original amounts
-        setConvertedAmount({
-          amount: income.amount.amount,
-          currency: income.amount.currency
+        setConversionState({
+          amount: { amount: income.amount.amount, currency: income.amount.currency },
+          monthly: {
+            amount: convertToMonthly(income.amount.amount, income.frequency),
+            currency: income.amount.currency,
+          },
+          loading: false,
         });
-        setConvertedMonthly({
-          amount: convertToMonthly(income.amount.amount, income.frequency),
-          currency: income.amount.currency
-        });
-      } finally {
-        setIsConverting(false);
       }
     };
 
     performConversion();
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, [income, convertAmount, primaryCurrency]);
 
   const originalCurrency = income.amount.currency;
@@ -152,12 +179,12 @@ function IncomeRow({
       </TableCell>
       <TableCell>
         <div className="space-y-1">
-          {isConverting ? (
+      {conversionState.loading ? (
             <Skeleton className="h-4 w-20" />
-          ) : convertedAmount ? (
+      ) : conversionState.amount ? (
             <>
               <div className="font-medium">
-                {formatCurrency(convertedAmount.amount, convertedAmount.currency)}
+        {formatCurrency(conversionState.amount.amount, conversionState.amount.currency)}
               </div>
               {showCurrencyIndicator && (
                 <div className="text-xs text-muted-foreground">
@@ -173,12 +200,12 @@ function IncomeRow({
       <TableCell>{frequencyLabels[income.frequency]}</TableCell>
       <TableCell>
         <div className="space-y-1">
-          {isConverting ? (
+      {conversionState.loading ? (
             <Skeleton className="h-4 w-24" />
-          ) : convertedMonthly ? (
+      ) : conversionState.monthly ? (
             <>
               <div className="font-medium">
-                {formatCurrency(convertedMonthly.amount, convertedMonthly.currency)}
+        {formatCurrency(conversionState.monthly.amount, conversionState.monthly.currency)}
               </div>
               {showCurrencyIndicator && (
                 <div className="text-xs text-muted-foreground">

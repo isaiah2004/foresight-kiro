@@ -188,7 +188,30 @@ describe('Loan Multi-Currency API Routes', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data).toEqual(mockRecommendations);
+      // Timestamps are serialized in JSON output; compare relevant fields ignoring Timestamp methods
+      expect(data).toEqual({
+        currencyRiskAnalysis: mockRecommendations.currencyRiskAnalysis,
+        refinancingOpportunities: [
+          {
+            loan: expect.objectContaining({
+              id: 'loan-1',
+              userId: mockUserId,
+              name: 'Test Loan',
+              type: 'personal',
+              principal: { amount: 10000, currency: 'USD' },
+              currentBalance: { amount: 8000, currency: 'USD' },
+              interestRate: 5.5,
+              termMonths: 60,
+              monthlyPayment: { amount: 200, currency: 'USD' },
+              startDate: expect.objectContaining({ seconds: expect.any(Number), nanoseconds: expect.any(Number) }),
+              nextPaymentDate: expect.objectContaining({ seconds: expect.any(Number), nanoseconds: expect.any(Number) })
+            }),
+            potentialSavings: { amount: 500, currency: 'USD' },
+            recommendation: 'Consider refinancing at lower rate'
+          }
+        ],
+        payoffOptimization: mockRecommendations.payoffOptimization
+      });
       expect(mockLoanService.getLoanOptimizationRecommendations).toHaveBeenCalledWith(mockUserId, 'USD');
     });
 

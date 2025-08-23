@@ -22,7 +22,9 @@ export async function GET() {
       count: currencies.length
     });
   } catch (error) {
-    console.error('Error fetching currencies:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error fetching currencies:', error);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch currencies' },
       { status: 500 }

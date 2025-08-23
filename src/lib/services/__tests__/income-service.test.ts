@@ -56,7 +56,8 @@ describe('IncomeService', () => {
         amount: { amount: 5000, currency: 'USD' },
         frequency: 'annually',
         startDate: Timestamp.fromDate(new Date('2024-01-01')),
-        endDate: Timestamp.fromDate(new Date('2024-12-31')),
+  // Keep active across projection window to avoid date-flaky tests
+  endDate: Timestamp.fromDate(new Date('2099-12-31')),
         isActive: true,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -131,7 +132,7 @@ describe('IncomeService', () => {
       
       // Each month should have the same amount for ongoing income
       result.forEach(projection => {
-        expect(projection.amount).toBeCloseTo(8416.67);
+        expect(projection.amount).toBeCloseTo(8416.67, 2);
       });
     });
   });
@@ -142,22 +143,20 @@ describe('IncomeService', () => {
       
       const result = await incomeService.getIncomeBreakdown('user1');
       
-      expect(result).toHaveLength(2); // salary and bonus
+  expect(result).toHaveLength(2); // salary and bonus
       
       const salaryBreakdown = result.find(item => item.type === 'salary');
       const bonusBreakdown = result.find(item => item.type === 'bonus');
       
-      expect(salaryBreakdown).toEqual({
-        type: 'salary',
-        amount: 8000,
-        percentage: (8000 / 8416.67) * 100,
-      });
-      
-      expect(bonusBreakdown).toEqual({
-        type: 'bonus',
-        amount: 416.67, // 5000 / 12
-        percentage: (416.67 / 8416.67) * 100,
-      });
+  expect(salaryBreakdown?.type).toBe('salary');
+  expect(salaryBreakdown?.currency).toBe('USD');
+  expect(salaryBreakdown?.amount).toBeCloseTo(8000, 2);
+  expect(salaryBreakdown && (salaryBreakdown.percentage)).toBeCloseTo((8000 / 8416.67) * 100, 2);
+
+  expect(bonusBreakdown?.type).toBe('bonus');
+  expect(bonusBreakdown?.currency).toBe('USD');
+  expect(bonusBreakdown?.amount).toBeCloseTo(416.67, 2); // 5000 / 12
+  expect(bonusBreakdown && (bonusBreakdown.percentage)).toBeCloseTo((416.67 / 8416.67) * 100, 2);
     });
   });
 

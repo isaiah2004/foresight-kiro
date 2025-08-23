@@ -93,7 +93,9 @@ export function LoanCurrencyAnalysis({ className }: LoanCurrencyAnalysisProps) {
         setRecommendations(recommendationsData);
       }
     } catch (error) {
-      console.error('Error fetching currency analysis:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error fetching currency analysis:', error);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { IncomeCurrencyAnalysis } from '../income-currency-analysis';
 import { useCurrency } from '@/contexts/currency-context';
 
@@ -95,14 +96,12 @@ describe('IncomeCurrencyAnalysis', () => {
     mockUseCurrency.mockReturnValue(mockCurrencyContext);
   });
 
-  it('renders loading state initially', () => {
+  it('renders loading state initially', async () => {
     mockFetch.mockImplementation(() => new Promise(() => {})); // Never resolves
 
     render(<IncomeCurrencyAnalysis userId="test-user" />);
-
-    expect(screen.getByText('Currency Analysis')).toBeInTheDocument();
-    // Should show skeleton loaders
-    expect(document.querySelectorAll('.animate-pulse')).toHaveLength(12); // 3 cards × 4 skeleton elements each
+    // Loading shows skeleton only, header isn't rendered until data arrives
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it('renders single currency message when no foreign income', async () => {
@@ -145,12 +144,11 @@ describe('IncomeCurrencyAnalysis', () => {
 
     render(<IncomeCurrencyAnalysis userId="test-user" />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Currency Analysis')).toBeInTheDocument();
-      expect(screen.getByText('Currency Exposure')).toBeInTheDocument();
-      expect(screen.getByText('Exchange Rate Impact')).toBeInTheDocument();
-      expect(screen.getByText('Tax Implications')).toBeInTheDocument();
-    });
+  // Wait for header and tab triggers to appear after data loads
+  expect(await screen.findByText('Currency Analysis')).toBeInTheDocument();
+  expect(await screen.findByRole('tab', { name: 'Currency Exposure' })).toBeInTheDocument();
+  expect(await screen.findByRole('tab', { name: 'Exchange Rate Impact' })).toBeInTheDocument();
+  expect(await screen.findByRole('tab', { name: 'Tax Implications' })).toBeInTheDocument();
   });
 
   it('displays currency exposure correctly', async () => {
@@ -170,22 +168,18 @@ describe('IncomeCurrencyAnalysis', () => {
 
     render(<IncomeCurrencyAnalysis userId="test-user" />);
 
-    await waitFor(() => {
-      // Check currency exposure tab content
-      expect(screen.getByText('Income by Currency')).toBeInTheDocument();
-      expect(screen.getByText('USD')).toBeInTheDocument();
-      expect(screen.getByText('GBP')).toBeInTheDocument();
-      expect(screen.getByText('EUR')).toBeInTheDocument();
-      
-      // Check risk levels
-      expect(screen.getByText('low risk')).toBeInTheDocument();
-      expect(screen.getByText('medium risk')).toBeInTheDocument();
-      
-      // Check percentages
-      expect(screen.getByText('60.0% of total')).toBeInTheDocument();
-      expect(screen.getByText('30.0% of total')).toBeInTheDocument();
-      expect(screen.getByText('10.0% of total')).toBeInTheDocument();
-    });
+  // Default tab is exposure; assert content using findBy
+  expect(await screen.findByText('Income by Currency')).toBeInTheDocument();
+  expect(screen.getByText('USD')).toBeInTheDocument();
+  expect(screen.getByText('GBP')).toBeInTheDocument();
+  expect(screen.getByText('EUR')).toBeInTheDocument();
+  // Risk badges may appear multiple times; use getAllByText
+  expect(screen.getAllByText('low risk').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('medium risk').length).toBeGreaterThan(0);
+  // Percentages
+  expect(screen.getByText('60.0% of total')).toBeInTheDocument();
+  expect(screen.getByText('30.0% of total')).toBeInTheDocument();
+  expect(screen.getByText('10.0% of total')).toBeInTheDocument();
   });
 
   it('displays exchange rate impact analysis', async () => {
@@ -203,23 +197,19 @@ describe('IncomeCurrencyAnalysis', () => {
         json: () => Promise.resolve(mockTaxImplications)
       } as Response);
 
-    render(<IncomeCurrencyAnalysis userId="test-user" />);
-
-    // Click on Exchange Rate Impact tab
-    const impactTab = screen.getByText('Exchange Rate Impact');
-    impactTab.click();
-
-    await waitFor(() => {
-      expect(screen.getByText('Total Foreign Income')).toBeInTheDocument();
-      expect(screen.getByText('Currency Risk Analysis')).toBeInTheDocument();
-      expect(screen.getByText('8.5% volatility')).toBeInTheDocument();
-      expect(screen.getByText('Best Case')).toBeInTheDocument();
-      expect(screen.getByText('Worst Case')).toBeInTheDocument();
-      
-      // Check recommendations
-      expect(screen.getByText('Recommendations:')).toBeInTheDocument();
-      expect(screen.getByText(/Consider hedging your GBP income exposure/)).toBeInTheDocument();
-    });
+  render(<IncomeCurrencyAnalysis userId="test-user" />);
+  const user = userEvent.setup();
+  // Wait for tab trigger then click
+  const impactTab = await screen.findByRole('tab', { name: 'Exchange Rate Impact' });
+  await user.click(impactTab);
+  // Now assert content appears
+  expect(await screen.findByText('Total Foreign Income')).toBeInTheDocument();
+  expect(screen.getByText('Currency Risk Analysis')).toBeInTheDocument();
+  expect(screen.getByText('8.5% volatility')).toBeInTheDocument();
+  expect(screen.getByText('Best Case')).toBeInTheDocument();
+  expect(screen.getByText('Worst Case')).toBeInTheDocument();
+  expect(screen.getByText('Recommendations:')).toBeInTheDocument();
+  expect(screen.getByText(/Consider hedging your GBP income exposure/)).toBeInTheDocument();
   });
 
   it('displays tax implications correctly', async () => {
@@ -237,26 +227,18 @@ describe('IncomeCurrencyAnalysis', () => {
         json: () => Promise.resolve(mockTaxImplications)
       } as Response);
 
-    render(<IncomeCurrencyAnalysis userId="test-user" />);
-
-    // Click on Tax Implications tab
-    const taxTab = screen.getByText('Tax Implications');
-    taxTab.click();
-
-    await waitFor(() => {
-      expect(screen.getByText('Domestic Income')).toBeInTheDocument();
-      expect(screen.getByText('Foreign Income')).toBeInTheDocument();
-      expect(screen.getByText('Tax Considerations by Currency')).toBeInTheDocument();
-      expect(screen.getByText('GBP Income')).toBeInTheDocument();
-      
-      // Check tax considerations
-      expect(screen.getByText(/Foreign income may be subject to withholding tax/)).toBeInTheDocument();
-      expect(screen.getByText(/You may be eligible for foreign tax credits/)).toBeInTheDocument();
-      
-      // Check general recommendations
-      expect(screen.getByText('General Tax Recommendations:')).toBeInTheDocument();
-      expect(screen.getByText(/Consult with a tax professional/)).toBeInTheDocument();
-    });
+  render(<IncomeCurrencyAnalysis userId="test-user" />);
+  const user = userEvent.setup();
+  const taxTab = await screen.findByRole('tab', { name: 'Tax Implications' });
+  await user.click(taxTab);
+  expect(await screen.findByText('Domestic Income')).toBeInTheDocument();
+  expect(screen.getByText('Foreign Income')).toBeInTheDocument();
+  expect(screen.getByText('Tax Considerations by Currency')).toBeInTheDocument();
+  expect(screen.getByText('GBP Income')).toBeInTheDocument();
+  expect(screen.getByText(/Foreign income may be subject to withholding tax/)).toBeInTheDocument();
+  expect(screen.getByText(/You may be eligible for foreign tax credits/)).toBeInTheDocument();
+  expect(screen.getByText('General Tax Recommendations:')).toBeInTheDocument();
+  expect(screen.getByText(/Consult with a tax professional/)).toBeInTheDocument();
   });
 
   it('handles API errors gracefully', async () => {

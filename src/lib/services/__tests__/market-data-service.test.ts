@@ -232,7 +232,14 @@ describe('MarketDataService', () => {
 
       const result = await marketDataService.searchSymbols('AAPL');
 
-      expect(result).toEqual(mockSearchData.result);
+      // Service filters to common stocks without dot-suffixed exchanges
+      expect(result).toEqual([
+        {
+          symbol: 'AAPL',
+          description: 'Apple Inc',
+          type: 'Common Stock',
+        },
+      ]);
       expect(mockFetch).toHaveBeenCalledWith(
         'https://finnhub.io/api/v1/search?q=AAPL&token=test-finnhub-key',
         {

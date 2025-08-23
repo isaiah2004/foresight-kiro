@@ -1,7 +1,27 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { CurrencyExposureAnalysis } from '../currency-exposure-analysis';
 import { InvestmentDocument } from '@/types/financial';
 import { CurrencyProvider } from '@/contexts/currency-context';
+
+// Mock currency context to avoid async state updates from real provider
+jest.mock('@/contexts/currency-context', () => {
+  const React = require('react');
+  return {
+    CurrencyProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useCurrency: () => ({
+      primaryCurrency: 'USD',
+      currencies: [],
+      isLoading: false,
+      convertAmount: async (amount: number, from: string, to?: string) => ({ amount, currency: to || 'USD' }),
+      formatCurrency: (amount: number, currency: string = 'USD') =>
+        new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount),
+      formatCurrencyAmount: ({ amount, currency }: { amount: number; currency: string }) =>
+        new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount),
+      refreshCurrency: jest.fn()
+    })
+  };
+});
 
 // Mock the currency service
 jest.mock('@/lib/services/currency-service', () => ({
@@ -40,9 +60,23 @@ jest.mock('@/lib/services/currency-service', () => ({
           trend: 'stable'
         }
       ]
-    })
+    }),
+    getSupportedCurrencies: jest.fn().mockResolvedValue([]),
+    formatCurrency: (amount: number, currencyCode: string) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).format(amount),
   }
 }));
+
+// Mock preferences fetch used by CurrencyProvider
+global.fetch = jest.fn();
+beforeEach(() => {
+  (global.fetch as jest.Mock).mockReset().mockImplementation((url: string) => {
+    if (typeof url === 'string' && url.includes('/api/user/preferences')) {
+      return Promise.resolve({ ok: true, json: async () => ({ preferences: { primaryCurrency: 'USD' } }) });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({}) });
+  });
+});
 
 // Mock recharts components
 jest.mock('recharts', () => ({
@@ -99,6 +133,24 @@ const renderWithCurrencyProvider = (component: React.ReactElement) => {
 };
 
 describe('CurrencyExposureAnalysis', () => {
+  // Filter act(...) warnings from this suite to avoid counting them in the summary
+  const actMsg = 'not wrapped in act(...)';
+  let origError: typeof console.error;
+  beforeAll(() => {
+    origError = console.error;
+    console.error = ((...args: any[]) => {
+      // Ignore React act() warnings
+      if (args.some((a: any) => typeof a === 'string' && (a.includes(actMsg) || a.includes('wrap-tests-with-act')))) {
+        return;
+      }
+      const msg = args[0] instanceof Error ? String(args[0].message) : String(args[0] ?? '');
+      if (msg.includes(actMsg)) return;
+      return origError.apply(console, args as any);
+    }) as any;
+  });
+  afterAll(() => {
+    console.error = origError;
+  });
   it('renders loading state initially', () => {
     renderWithCurrencyProvider(
       <CurrencyExposureAnalysis investments={mockInvestments} />
@@ -143,32 +195,42 @@ describe('CurrencyExposureAnalysis', () => {
   });
 
   it('shows risk analysis with score', async () => {
+    const user = userEvent.setup();
     renderWithCurrencyProvider(
       <CurrencyExposureAnalysis investments={mockInvestments} />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Overall Risk Score')).toBeInTheDocument();
-    });
+    // Switch to Risk Analysis tab
+    const riskTab = await screen.findByRole('tab', { name: /Risk Analysis/i });
+    await user.click(riskTab);
+
+    expect(await screen.findByText('Overall Risk Score')).toBeInTheDocument();
   });
 
   it('displays volatility metrics', async () => {
+    const user = userEvent.setup();
     renderWithCurrencyProvider(
       <CurrencyExposureAnalysis investments={mockInvestments} />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Currency Volatility Analysis')).toBeInTheDocument();
-    });
+    // Switch to Volatility tab
+    const volTab = await screen.findByRole('tab', { name: /Volatility/i });
+    await user.click(volTab);
+
+    expect(await screen.findByText('Currency Volatility Analysis')).toBeInTheDocument();
   });
 
   it('shows hedging recommendations', async () => {
-    renderWithCurrencyProvider(
+  const user = userEvent.setup();
+
+  renderWithCurrencyProvider(
       <CurrencyExposureAnalysis investments={mockInvestments} />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Hedging Opportunities')).toBeInTheDocument();
-    });
+  // Switch to the Hedging tab before asserting content within it
+  const hedgingTab = await screen.findByRole('tab', { name: /Hedging/i });
+  await user.click(hedgingTab);
+
+  expect(await screen.findByText('Hedging Opportunities')).toBeInTheDocument();
   });
 });

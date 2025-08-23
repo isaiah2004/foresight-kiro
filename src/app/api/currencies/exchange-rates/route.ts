@@ -2,25 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { currencyService } from '@/lib/services/currency-service';
 import { z } from 'zod';
+import { currencyCodeSchema } from '@/lib/validations';
 
 const exchangeRateQuerySchema = z.object({
-  from: z.string().min(3).max(3),
-  to: z.string().min(3).max(3),
+  from: currencyCodeSchema,
+  to: currencyCodeSchema,
 });
 
-const multipleRatesQuerySchema = z.object({
-  pairs: z.string().transform((str) => {
-    try {
-      const parsed = JSON.parse(str);
-      return z.array(z.object({
-        from: z.string().min(3).max(3),
-        to: z.string().min(3).max(3)
-      })).parse(parsed);
-    } catch {
-      throw new Error('Invalid pairs format');
-    }
+const pairsArraySchema = z.array(
+  z.object({
+    from: currencyCodeSchema,
+    to: currencyCodeSchema,
   })
-});
+);
 
 // GET /api/currencies/exchange-rates?from=USD&to=EUR
 // GET /api/currencies/exchange-rates?pairs=[{"from":"USD","to":"EUR"},{"from":"GBP","to":"USD"}]
@@ -39,14 +33,31 @@ export async function GET(request: NextRequest) {
     
     // Check if requesting multiple pairs
     const pairsParam = searchParams.get('pairs');
-    if (pairsParam) {
-      const { pairs } = multipleRatesQuerySchema.parse({ pairs: pairsParam });
-      
-      const rates = await currencyService.getMultipleRates(pairs);
-      
+  if (pairsParam) {
+      // Parse pairs JSON safely and validate with Zod
+      let parsedPairs: unknown;
+      try {
+        parsedPairs = JSON.parse(pairsParam);
+      } catch {
+        return NextResponse.json(
+          { error: 'Invalid parameters' },
+          { status: 400 }
+        );
+      }
+
+      const parsed = pairsArraySchema.safeParse(parsedPairs);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: 'Invalid parameters' },
+          { status: 400 }
+        );
+      }
+
+      const rates = await currencyService.getMultipleRates(parsed.data);
+
       return NextResponse.json({
         rates,
-        count: rates.length
+        count: rates.length,
       });
     }
     
@@ -61,13 +72,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { from: validFrom, to: validTo } = exchangeRateQuerySchema.parse({ from, to });
+  const { from: validFrom, to: validTo } = exchangeRateQuerySchema.parse({ from, to });
     
     const rate = await currencyService.getExchangeRate(validFrom, validTo);
     
     return NextResponse.json({ rate });
   } catch (error) {
-    console.error('Error fetching exchange rates:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error fetching exchange rates:', error);
+    }
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

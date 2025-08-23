@@ -150,7 +150,8 @@ body {
 *::-webkit-scrollbar-track {
   border-radius: 9px;
   background-color: #1a3a29;
-  border: 2px solid #18181b;
+  border: 2px solid var(--color-sidebar);
+  
 }
 
 *::-webkit-scrollbar-track:hover {

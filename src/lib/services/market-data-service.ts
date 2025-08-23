@@ -47,15 +47,16 @@ export interface CryptoSearchResult {
 }
 
 export class MarketDataService {
-  private readonly finnhubApiKey: string;
-  private readonly alphaVantageApiKey: string;
+  private get finnhubApiKey(): string {
+    return process.env.FINNHUB_API_KEY || '';
+  }
+  private get alphaVantageApiKey(): string {
+    return process.env.ALPHA_VANTAGE_API_KEY || '';
+  }
   private readonly baseUrl = 'https://finnhub.io/api/v1';
   private readonly alphaVantageUrl = 'https://www.alphavantage.co/query';
 
-  constructor() {
-    this.finnhubApiKey = process.env.FINNHUB_API_KEY || '';
-    this.alphaVantageApiKey = process.env.ALPHA_VANTAGE_API_KEY || '';
-  }
+  constructor() {}
 
   /**
    * Get real-time quote for a symbol using FinnHub
@@ -63,11 +64,15 @@ export class MarketDataService {
   async getRealTimeQuote(symbol: string): Promise<MarketQuote | null> {
     try {
       if (!this.finnhubApiKey) {
-        console.warn('FinnHub API key not configured');
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('FinnHub API key not configured');
+        }
         return null;
       }
 
-      console.log(`Fetching quote for ${symbol} from FinnHub...`);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`Fetching quote for ${symbol} from FinnHub...`);
+      }
       const response = await fetch(
         `${this.baseUrl}/quote?symbol=${symbol}&token=${this.finnhubApiKey}`,
         {
@@ -78,16 +83,22 @@ export class MarketDataService {
       );
 
       if (!response.ok) {
-        console.error(`FinnHub API error for ${symbol}: ${response.status}`);
+        if (process.env.NODE_ENV !== 'test') {
+          console.error(`FinnHub API error for ${symbol}: ${response.status}`);
+        }
         throw new Error(`FinnHub API error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log(`Raw FinnHub data for ${symbol}:`, data);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`Raw FinnHub data for ${symbol}:`, data);
+      }
 
       // FinnHub returns 0 values for invalid symbols
       if (data.c === 0 && data.h === 0 && data.l === 0) {
-        console.warn(`No valid data returned for symbol ${symbol}`);
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn(`No valid data returned for symbol ${symbol}`);
+        }
         return null;
       }
 
@@ -102,10 +113,14 @@ export class MarketDataService {
         previousClose: data.pc,
       };
 
-      console.log(`Processed quote for ${symbol}:`, quote);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`Processed quote for ${symbol}:`, quote);
+      }
       return quote;
     } catch (error) {
-      console.error(`Error fetching quote for ${symbol}:`, error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error(`Error fetching quote for ${symbol}:`, error);
+      }
       return null;
     }
   }
@@ -142,7 +157,9 @@ export class MarketDataService {
   async getHistoricalData(symbol: string, period: 'daily' | 'weekly' | 'monthly' = 'daily'): Promise<HistoricalData[]> {
     try {
       if (!this.alphaVantageApiKey) {
-        console.warn('Alpha Vantage API key not configured');
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('Alpha Vantage API key not configured');
+        }
         return [];
       }
 
@@ -168,7 +185,9 @@ export class MarketDataService {
       }
 
       if (data['Note']) {
-        console.warn('Alpha Vantage rate limit:', data['Note']);
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('Alpha Vantage rate limit:', data['Note']);
+        }
         return [];
       }
 
@@ -194,7 +213,9 @@ export class MarketDataService {
       // Sort by date (most recent first)
       return historicalData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (error) {
-      console.error(`Error fetching historical data for ${symbol}:`, error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error(`Error fetching historical data for ${symbol}:`, error);
+      }
       return [];
     }
   }
@@ -205,7 +226,9 @@ export class MarketDataService {
   async getMarketNews(category: string = 'general', limit: number = 10): Promise<NewsItem[]> {
     try {
       if (!this.finnhubApiKey) {
-        console.warn('FinnHub API key not configured');
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('FinnHub API key not configured');
+        }
         return [];
       }
 
@@ -225,7 +248,9 @@ export class MarketDataService {
       const data = await response.json();
       return data.slice(0, limit);
     } catch (error) {
-      console.error('Error fetching market news:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error fetching market news:', error);
+      }
       return [];
     }
   }
@@ -236,7 +261,9 @@ export class MarketDataService {
   async searchSymbols(query: string): Promise<Array<{ symbol: string; description: string; type: string }>> {
     try {
       if (!this.finnhubApiKey) {
-        console.warn('FinnHub API key not configured');
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('FinnHub API key not configured');
+        }
         return [];
       }
 
@@ -286,7 +313,9 @@ export class MarketDataService {
         })
         .slice(0, 10); // Return top 10 results
     } catch (error) {
-      console.error('Error searching symbols:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error searching symbols:', error);
+      }
       return [];
     }
   }
@@ -327,7 +356,9 @@ export class MarketDataService {
         country: data.country || 'Unknown',
       };
     } catch (error) {
-      console.error(`Error fetching company profile for ${symbol}:`, error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error(`Error fetching company profile for ${symbol}:`, error);
+      }
       return null;
     }
   }
@@ -338,22 +369,30 @@ export class MarketDataService {
   async getCryptoQuote(symbol: string, market: string = 'USD'): Promise<CryptoQuote | null> {
     try {
       if (!this.alphaVantageApiKey) {
-        console.warn('Alpha Vantage API key not configured');
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('Alpha Vantage API key not configured');
+        }
         return null;
       }
 
-      console.log(`Fetching crypto quote for ${symbol} from Alpha Vantage...`);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`Fetching crypto quote for ${symbol} from Alpha Vantage...`);
+      }
       const response = await fetch(
         `${this.alphaVantageUrl}?function=CURRENCY_EXCHANGE_RATE&from_currency=${symbol}&to_currency=${market}&apikey=${this.alphaVantageApiKey}`
       );
 
       if (!response.ok) {
-        console.error(`Alpha Vantage API error for ${symbol}: ${response.status}`);
+        if (process.env.NODE_ENV !== 'test') {
+          console.error(`Alpha Vantage API error for ${symbol}: ${response.status}`);
+        }
         throw new Error(`Alpha Vantage API error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log(`Raw Alpha Vantage crypto data for ${symbol}:`, data);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`Raw Alpha Vantage crypto data for ${symbol}:`, data);
+      }
 
       // Check for API errors
       if (data['Error Message']) {
@@ -361,7 +400,9 @@ export class MarketDataService {
       }
 
       if (data['Note']) {
-        console.warn('Alpha Vantage rate limit:', data['Note']);
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('Alpha Vantage rate limit:', data['Note']);
+        }
         return null;
       }
 

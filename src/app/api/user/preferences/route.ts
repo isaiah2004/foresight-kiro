@@ -26,7 +26,9 @@ export async function GET() {
       }
     });
   } catch (error) {
-    console.error('Error fetching user preferences:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error fetching user preferences:', error);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch user preferences' },
       { status: 500 }
@@ -49,16 +51,26 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     
     // Validate the request body
-    const validatedPreferences = userPreferencesSchema.partial().parse(body);
+    const partial = userPreferencesSchema.partial().parse(body);
+
+    // Merge with safe defaults ONLY for booleans to ensure consistent shape
+    const merged = {
+      ...partial,
+      notifications: partial.notifications ?? true,
+      showOriginalCurrencies: partial.showOriginalCurrencies ?? true,
+      autoDetectCurrency: partial.autoDetectCurrency ?? false,
+    };
     
-    await userService.updatePreferences(userId, validatedPreferences);
+    await userService.updatePreferences(userId, merged);
     
     return NextResponse.json({
       success: true,
       message: 'Preferences updated successfully'
     });
   } catch (error) {
-    console.error('Error updating user preferences:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error updating user preferences:', error);
+    }
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

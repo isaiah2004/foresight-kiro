@@ -76,7 +76,9 @@ export function IncomeCurrencyAnalysis({ userId }: IncomeCurrencyAnalysisProps) 
           taxImplications
         });
       } catch (err) {
-        console.error('Error fetching currency analysis:', err);
+        if (process.env.NODE_ENV !== 'test') {
+          console.error('Error fetching currency analysis:', err);
+        }
         setError('Failed to load currency analysis');
       } finally {
         setIsLoading(false);

@@ -16,7 +16,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
       const allLoans = await this.getAllOrdered(userId);
       return allLoans.filter(loan => loan.type === type);
     } catch (error) {
-      console.error('Error getting loans by type:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error getting loans by type:', error);
+      }
       return []; // Return empty array instead of throwing
     }
   }
@@ -34,12 +36,16 @@ export class LoanService extends BaseFirebaseService<Loan> {
             const dateB = b.nextPaymentDate instanceof Timestamp ? b.nextPaymentDate.toDate() : new Date(b.nextPaymentDate as any);
             return dateA.getTime() - dateB.getTime();
           } catch (error) {
-            console.error('Error comparing payment dates:', error);
+            if (process.env.NODE_ENV !== 'test') {
+              console.error('Error comparing payment dates:', error);
+            }
             return 0;
           }
         });
     } catch (error) {
-      console.error('Error getting active loans:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error getting active loans:', error);
+      }
       return []; // Return empty array instead of throwing
     }
   }
@@ -75,7 +81,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
             const convertedAmount = await currencyService.convertAmount(loanAmount, loanCurrency, primaryCurrency);
             totalDebt += convertedAmount.amount;
           } catch (error) {
-            console.error(`Error converting ${loanAmount} ${loanCurrency} to ${primaryCurrency}:`, error);
+            if (process.env.NODE_ENV !== 'test') {
+              console.error(`Error converting ${loanAmount} ${loanCurrency} to ${primaryCurrency}:`, error);
+            }
             // Fallback to original amount with warning
             totalDebt += loanAmount;
           }
@@ -87,7 +95,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
         currency: primaryCurrency 
       };
     } catch (error) {
-      console.error('Error calculating total debt:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error calculating total debt:', error);
+      }
       return { amount: 0, currency: primaryCurrency || 'USD' };
     }
   }
@@ -118,7 +128,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
             const convertedAmount = await currencyService.convertAmount(paymentAmount, paymentCurrency, primaryCurrency);
             totalPayments += convertedAmount.amount;
           } catch (error) {
-            console.error(`Error converting ${paymentAmount} ${paymentCurrency} to ${primaryCurrency}:`, error);
+            if (process.env.NODE_ENV !== 'test') {
+              console.error(`Error converting ${paymentAmount} ${paymentCurrency} to ${primaryCurrency}:`, error);
+            }
             // Fallback to original amount with warning
             totalPayments += paymentAmount;
           }
@@ -130,7 +142,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
         currency: primaryCurrency 
       };
     } catch (error) {
-      console.error('Error calculating total monthly payments:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error calculating total monthly payments:', error);
+      }
       return { amount: 0, currency: primaryCurrency || 'USD' };
     }
   }
@@ -171,7 +185,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
       const principalPayment = Math.min(loan.monthlyPayment.amount - interestPayment, remainingBalance);
       
       if (principalPayment <= 0 && remainingBalance > 0) {
-        console.warn('Loan payment is less than interest, amortization will not complete.');
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('Loan payment is less than interest, amortization will not complete.');
+        }
         break;
       }
       
@@ -201,7 +217,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
       const schedule = this.generateAmortizationSchedule(loan);
       return schedule.length > 0 ? schedule[schedule.length - 1].paymentDate : new Date();
     } catch (error) {
-      console.error('Error calculating payoff date:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error calculating payoff date:', error);
+      }
       return new Date();
     }
   }
@@ -216,7 +234,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
       const schedule = this.generateAmortizationSchedule(loan);
       return schedule.reduce((total, payment) => total + (payment.interestPayment || 0), 0);
     } catch (error) {
-      console.error('Error calculating total interest:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error calculating total interest:', error);
+      }
       return 0;
     }
   }
@@ -272,7 +292,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
         }
       };
     } catch (error) {
-      console.error('Error getting debt payoff strategies:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error getting debt payoff strategies:', error);
+      }
       return {
         snowball: { order: [], totalInterest: 0, payoffTime: 0 },
         avalanche: { order: [], totalInterest: 0, payoffTime: 0 }
@@ -363,7 +385,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
             const converted = await currencyService.convertAmount(currencyDebt, currency, primaryCurrency);
             convertedAmount = converted.amount;
           } catch (error) {
-            console.error(`Error converting ${currencyDebt} ${currency} to ${primaryCurrency}:`, error);
+            if (process.env.NODE_ENV !== 'test') {
+              console.error(`Error converting ${currencyDebt} ${currency} to ${primaryCurrency}:`, error);
+            }
           }
         }
 
@@ -391,7 +415,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
 
       return exposures.sort((a, b) => b.percentage - a.percentage);
     } catch (error) {
-      console.error('Error calculating currency exposure:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error calculating currency exposure:', error);
+      }
       return [];
     }
   }
@@ -463,7 +489,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
               totalDebt += convertedDebt.amount;
               totalPayments += convertedPayment.amount;
             } catch (error) {
-              console.error(`Error converting loan amounts for projection:`, error);
+              if (process.env.NODE_ENV !== 'test') {
+                console.error(`Error converting loan amounts for projection:`, error);
+              }
               totalDebt += remainingBalance;
               totalPayments += monthlyPayment;
             }
@@ -492,7 +520,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
 
       return projections;
     } catch (error) {
-      console.error('Error generating multi-currency projections:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error generating multi-currency projections:', error);
+      }
       return [];
     }
   }
@@ -593,7 +623,9 @@ export class LoanService extends BaseFirebaseService<Loan> {
         }
       };
     } catch (error) {
-      console.error('Error generating loan optimization recommendations:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error generating loan optimization recommendations:', error);
+      }
       return {
         currencyRiskAnalysis: { highRiskLoans: [], recommendations: [] },
         refinancingOpportunities: [],

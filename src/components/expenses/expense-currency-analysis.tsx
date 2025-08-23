@@ -86,7 +86,9 @@ export function ExpenseCurrencyAnalysis() {
         setCurrencyExposure(data);
       }
     } catch (error) {
-      console.error('Error fetching currency exposure:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error fetching currency exposure:', error);
+      }
     }
   }, []);
 
@@ -98,7 +100,9 @@ export function ExpenseCurrencyAnalysis() {
         setProjections(data);
       }
     } catch (error) {
-      console.error('Error fetching projections:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error fetching projections:', error);
+      }
     }
   }, []);
 
@@ -125,7 +129,9 @@ export function ExpenseCurrencyAnalysis() {
         setBudgetAlerts(data);
       }
     } catch (error) {
-      console.error('Error fetching budget alerts:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error fetching budget alerts:', error);
+      }
     }
   }, [primaryCurrency]);
 
@@ -163,7 +169,7 @@ export function ExpenseCurrencyAnalysis() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-8" data-testid="loading">
             <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         </CardContent>

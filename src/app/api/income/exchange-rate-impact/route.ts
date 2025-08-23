@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(exchangeRateImpact);
   } catch (error) {
-    console.error('Error fetching exchange rate impact:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error fetching exchange rate impact:', error);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch exchange rate impact' },
       { status: 500 }

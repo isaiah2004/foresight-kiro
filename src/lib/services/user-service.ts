@@ -57,7 +57,9 @@ export class UserService {
         await setDoc(userDocRef, newUser);
       }
     } catch (error) {
-      console.error('Error creating/updating user:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error creating/updating user:', error);
+      }
       throw new Error('Failed to create or update user profile');
     }
   }
@@ -73,7 +75,9 @@ export class UserService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting user:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error getting user:', error);
+      }
       throw new Error('Failed to get user profile');
     }
   }
@@ -121,7 +125,9 @@ export class UserService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error('Error updating user preferences:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error updating user preferences:', error);
+      }
       throw new Error('Failed to update user preferences');
     }
   }
@@ -145,7 +151,9 @@ export class UserService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error('Error updating user profile:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error updating user profile:', error);
+      }
       throw new Error('Failed to update user profile');
     }
   }
@@ -174,7 +182,9 @@ export class UserService {
         autoDetectCurrency: false
       };
     } catch (error) {
-      console.error('Error getting user preferences:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error getting user preferences:', error);
+      }
       throw new Error('Failed to get user preferences');
     }
   }
@@ -186,7 +196,9 @@ export class UserService {
       const userDoc = await getDoc(userDocRef);
       return userDoc.exists();
     } catch (error) {
-      console.error('Error checking if user exists:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error checking if user exists:', error);
+      }
       return false;
     }
   }
@@ -207,7 +219,9 @@ export class UserService {
       // - Creating welcome notifications
       
     } catch (error) {
-      console.error('Error initializing new user:', error);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error initializing new user:', error);
+      }
       throw new Error('Failed to initialize new user');
     }
   }

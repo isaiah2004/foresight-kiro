@@ -57,7 +57,9 @@ export class ExpenseService extends BaseFirebaseService<Expense> {
           );
           total += convertedAmount.amount;
         } catch (error) {
-          console.warn(`Failed to convert ${expense.amount.currency} to ${primaryCurrency}, using original amount:`, error);
+          if (process.env.NODE_ENV !== 'test') {
+            console.warn(`Failed to convert ${expense.amount.currency} to ${primaryCurrency}, using original amount:`, error);
+          }
           total += monthlyAmount; // Fallback to original amount
         }
       } else {
@@ -106,7 +108,9 @@ export class ExpenseService extends BaseFirebaseService<Expense> {
           );
           convertedAmount = converted.amount;
         } catch (error) {
-          console.warn(`Failed to convert ${expense.amount.currency} to ${primaryCurrency}:`, error);
+          if (process.env.NODE_ENV !== 'test') {
+            console.warn(`Failed to convert ${expense.amount.currency} to ${primaryCurrency}:`, error);
+          }
         }
       }
       
@@ -189,7 +193,9 @@ export class ExpenseService extends BaseFirebaseService<Expense> {
           const converted = await currencyService.convertAmount(monthlyAmount, expense.amount.currency, primaryCurrency);
           fixedTotal += converted.amount;
         } catch (error) {
-          console.warn(`Failed to convert ${expense.amount.currency} to ${primaryCurrency}:`, error);
+          if (process.env.NODE_ENV !== 'test') {
+            console.warn(`Failed to convert ${expense.amount.currency} to ${primaryCurrency}:`, error);
+          }
           fixedTotal += monthlyAmount; // Fallback
         }
       } else {
@@ -205,7 +211,9 @@ export class ExpenseService extends BaseFirebaseService<Expense> {
           const converted = await currencyService.convertAmount(monthlyAmount, expense.amount.currency, primaryCurrency);
           variableTotal += converted.amount;
         } catch (error) {
-          console.warn(`Failed to convert ${expense.amount.currency} to ${primaryCurrency}:`, error);
+          if (process.env.NODE_ENV !== 'test') {
+            console.warn(`Failed to convert ${expense.amount.currency} to ${primaryCurrency}:`, error);
+          }
           variableTotal += monthlyAmount; // Fallback
         }
       } else {
@@ -235,8 +243,9 @@ export class ExpenseService extends BaseFirebaseService<Expense> {
     }
 
     // Multi-currency specific suggestions
-    const allExpenses = await this.getAllOrdered(userId);
-    const currencies = new Set(allExpenses.map(e => e.amount.currency));
+  const allExpenses = await this.getAllOrdered(userId);
+  const list = Array.isArray(allExpenses) ? allExpenses : [];
+  const currencies = new Set(list.map(e => e.amount.currency));
     
     if (currencies.size > 1) {
       suggestions.push(`You have expenses in ${currencies.size} different currencies. Consider monitoring exchange rate impacts on your budget.`);
@@ -279,7 +288,9 @@ export class ExpenseService extends BaseFirebaseService<Expense> {
           const converted = await currencyService.convertAmount(monthlyAmount, currency, primaryCurrency);
           convertedAmount = converted.amount;
         } catch (error) {
-          console.warn(`Failed to convert ${currency} to ${primaryCurrency}:`, error);
+          if (process.env.NODE_ENV !== 'test') {
+            console.warn(`Failed to convert ${currency} to ${primaryCurrency}:`, error);
+          }
         }
       }
       totalInPrimaryCurrency += convertedAmount;
@@ -295,7 +306,9 @@ export class ExpenseService extends BaseFirebaseService<Expense> {
           const converted = await currencyService.convertAmount(amount, currency, primaryCurrency);
           convertedAmount = converted.amount;
         } catch (error) {
-          console.warn(`Failed to convert ${currency} to ${primaryCurrency}:`, error);
+          if (process.env.NODE_ENV !== 'test') {
+            console.warn(`Failed to convert ${currency} to ${primaryCurrency}:`, error);
+          }
         }
       }
 
@@ -367,7 +380,9 @@ export class ExpenseService extends BaseFirebaseService<Expense> {
               const converted = await currencyService.convertAmount(monthlyAmount, currency, primaryCurrency);
               monthlyTotal += converted.amount;
             } catch (error) {
-              console.warn(`Failed to convert ${currency} to ${primaryCurrency}:`, error);
+              if (process.env.NODE_ENV !== 'test') {
+                console.warn(`Failed to convert ${currency} to ${primaryCurrency}:`, error);
+              }
               monthlyTotal += monthlyAmount; // Fallback
             }
           } else {
@@ -422,7 +437,9 @@ export class ExpenseService extends BaseFirebaseService<Expense> {
           );
           convertedBudgetAmount = converted.amount;
         } catch (error) {
-          console.warn(`Failed to convert budget limit for ${category}:`, error);
+          if (process.env.NODE_ENV !== 'test') {
+            console.warn(`Failed to convert budget limit for ${category}:`, error);
+          }
         }
       }
 

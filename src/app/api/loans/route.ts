@@ -29,7 +29,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(loans);
   } catch (error) {
-    console.error('Error fetching loans:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error fetching loans:', error);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch loans' },
       { status: 500 }
@@ -77,7 +79,9 @@ export async function POST(request: NextRequest) {
     const loan = await loanService.getById(userId, loanId);
     return NextResponse.json(loan, { status: 201 });
   } catch (error) {
-    console.error('Error creating loan:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error creating loan:', error);
+    }
     
     if (error instanceof ZodError) {
       return NextResponse.json(
