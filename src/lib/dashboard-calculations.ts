@@ -65,6 +65,11 @@ export interface DashboardMetrics {
   portfolioValue: number;
   savingsRate: number;
   debtToIncomeRatio: number;
+  // New metrics for enhanced dashboard
+  thisMonthSpending: number;
+  remainingBudget: number;
+  monthlyBudget: number;
+  emergencyFundMonths: number;
 }
 
 export interface GoalSummary {
@@ -73,6 +78,213 @@ export interface GoalSummary {
   progress: number; // percentage
   targetAmount: number;
   currentAmount: number;
+}
+
+// Mock data generators for charts
+export interface MonthlySpendingData {
+  month: string;
+  spending: number;
+  budget: number;
+  category: string;
+}
+
+export interface LoanRepaymentData {
+  month: string;
+  remainingBalance: number;
+  principalPaid: number;
+  interestPaid: number;
+}
+
+export interface DebtToIncomeData {
+  month: string;
+  ratio: number;
+  totalDebt: number;
+  monthlyIncome: number;
+}
+
+export interface InvestmentGrowthData {
+  month: string;
+  historical: number;
+  projected: number;
+  growthRate: number;
+}
+
+export interface FundProgressData {
+  month: string;
+  emergencyFund: number;
+  carFund: number;
+  retirementFund: number;
+  targetEmergency: number;
+  targetCar: number;
+  targetRetirement: number;
+}
+
+export interface AssetData {
+  month: string;
+  homes: number;
+  cars: number;
+  land: number;
+  totalAssets: number;
+}
+
+/**
+ * Generate mock monthly spending data
+ */
+export function generateMonthlySpendingData(monthlyExpenses: number): MonthlySpendingData[] {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentMonth = new Date().getMonth();
+  
+  return months.slice(0, currentMonth + 1).map((month, index) => {
+    const variance = 0.8 + Math.random() * 0.4; // ±20% variance
+    const spending = monthlyExpenses * variance;
+    const budget = monthlyExpenses * 1.1; // 10% buffer
+    
+    return {
+      month,
+      spending,
+      budget,
+      category: 'mixed',
+    };
+  });
+}
+
+/**
+ * Generate mock loan repayment data
+ */
+export function generateLoanRepaymentData(loan: Loan): LoanRepaymentData[] {
+  const months = [];
+  const monthlyPayment = loan.monthlyPayment.amount;
+  const interestRate = loan.interestRate / 100 / 12; // Monthly rate
+  let balance = loan.currentBalance.amount;
+  
+  for (let i = 0; i < Math.min(24, loan.termMonths); i++) {
+    const interestPaid = balance * interestRate;
+    const principalPaid = monthlyPayment - interestPaid;
+    balance -= principalPaid;
+    
+    months.push({
+      month: new Date(Date.now() + i * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      remainingBalance: Math.max(0, balance),
+      principalPaid,
+      interestPaid,
+    });
+  }
+  
+  return months;
+}
+
+/**
+ * Generate mock debt-to-income data
+ */
+export function generateDebtToIncomeData(totalDebt: number, monthlyIncome: number): DebtToIncomeData[] {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentMonth = new Date().getMonth();
+  
+  return months.slice(Math.max(0, currentMonth - 11), currentMonth + 1).map((month, index) => {
+    // Simulate gradual improvement in debt-to-income ratio
+    const debtReduction = index * 0.02; // 2% improvement per month
+    const adjustedDebt = totalDebt * (1 - debtReduction);
+    const ratio = monthlyIncome > 0 ? (adjustedDebt / (monthlyIncome * 12)) * 100 : 0;
+    
+    return {
+      month,
+      ratio,
+      totalDebt: adjustedDebt,
+      monthlyIncome,
+    };
+  });
+}
+
+/**
+ * Generate mock investment growth data
+ */
+export function generateInvestmentGrowthData(currentValue: number): InvestmentGrowthData[] {
+  const months = [];
+  const avgGrowthRate = 0.08 / 12; // 8% annual growth
+  
+  // Historical data (last 12 months)
+  for (let i = -12; i <= 0; i++) {
+    const variance = 0.95 + Math.random() * 0.1; // ±5% variance
+    const monthlyGrowth = avgGrowthRate * variance;
+    const value = currentValue * Math.pow(1 + monthlyGrowth, i);
+    
+    months.push({
+      month: new Date(Date.now() + i * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      historical: i <= 0 ? value : 0,
+      projected: i > 0 ? value : 0,
+      growthRate: monthlyGrowth * 12 * 100,
+    });
+  }
+  
+  // Projected data (next 24 months)
+  for (let i = 1; i <= 24; i++) {
+    const value = currentValue * Math.pow(1 + avgGrowthRate, i);
+    
+    months.push({
+      month: new Date(Date.now() + i * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      historical: 0,
+      projected: value,
+      growthRate: avgGrowthRate * 12 * 100,
+    });
+  }
+  
+  return months;
+}
+
+/**
+ * Generate mock fund progress data
+ */
+export function generateFundProgressData(goals: Goal[]): FundProgressData[] {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentMonth = new Date().getMonth();
+  
+  const emergencyGoal = goals.find(g => g.type === 'emergency_fund');
+  const retirementGoal = goals.find(g => g.type === 'retirement');
+  const carGoal = goals.find(g => g.name.toLowerCase().includes('car')) || { currentAmount: { amount: 5000 }, targetAmount: { amount: 25000 } };
+  
+  return months.slice(0, currentMonth + 1).map((month, index) => {
+    const progress = index / 12; // Linear progress for demo
+    
+    return {
+      month,
+      emergencyFund: (emergencyGoal?.currentAmount.amount || 0) * (0.5 + progress * 0.5),
+      carFund: (carGoal.currentAmount?.amount || 5000) * (0.3 + progress * 0.7),
+      retirementFund: (retirementGoal?.currentAmount.amount || 0) * (0.8 + progress * 0.2),
+      targetEmergency: emergencyGoal?.targetAmount.amount || 20000,
+      targetCar: carGoal.targetAmount?.amount || 25000,
+      targetRetirement: retirementGoal?.targetAmount.amount || 1000000,
+    };
+  });
+}
+
+/**
+ * Generate mock asset growth data
+ */
+export function generateAssetGrowthData(): AssetData[] {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentMonth = new Date().getMonth();
+  
+  const baseHomes = 250000;
+  const baseCars = 25000;
+  const baseLand = 100000;
+  
+  return months.slice(0, currentMonth + 1).map((month, index) => {
+    const homeAppreciation = 1 + (index * 0.005); // 0.5% monthly appreciation
+    const carDepreciation = 1 - (index * 0.01); // 1% monthly depreciation
+    const landAppreciation = 1 + (index * 0.003); // 0.3% monthly appreciation
+    
+    const homes = baseHomes * homeAppreciation;
+    const cars = baseCars * carDepreciation;
+    const land = baseLand * landAppreciation;
+    
+    return {
+      month,
+      homes,
+      cars,
+      land,
+      totalAssets: homes + cars + land,
+    };
+  });
 }
 
 /**
@@ -226,6 +438,16 @@ function convertToMonthly(amount: number, frequency: string): number {
 }
 
 /**
+ * Calculate emergency fund coverage in months
+ */
+export function calculateEmergencyFundMonths(
+  portfolioValue: number,
+  monthlyExpenses: number
+): number {
+  return monthlyExpenses > 0 ? portfolioValue / monthlyExpenses : 0;
+}
+
+/**
  * Aggregate all dashboard metrics
  */
 export function calculateDashboardMetrics(
@@ -250,6 +472,12 @@ export function calculateDashboardMetrics(
     portfolioValue,
     monthlyExpenses
   );
+  const emergencyFundMonths = calculateEmergencyFundMonths(portfolioValue, monthlyExpenses);
+  
+  // Calculate additional metrics
+  const monthlyBudget = monthlyIncome * 0.8; // 80% of income as budget
+  const thisMonthSpending = monthlyExpenses; // This would be calculated from current month data in real app
+  const remainingBudget = Math.max(0, monthlyBudget - thisMonthSpending);
 
   return {
     netWorth,
@@ -261,6 +489,10 @@ export function calculateDashboardMetrics(
     portfolioValue,
     savingsRate,
     debtToIncomeRatio,
+    thisMonthSpending,
+    remainingBudget,
+    monthlyBudget,
+    emergencyFundMonths,
   };
 }
 

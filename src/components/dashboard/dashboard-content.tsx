@@ -2,10 +2,28 @@
 
 import { Timestamp } from "firebase/firestore";
 import { DashboardCards } from "@/components/dashboard/dashboard-cards";
-import { calculateDashboardMetrics } from "@/lib/dashboard-calculations";
+import { 
+  MonthlySpendingChart,
+  LoanRepaymentChart,
+  DebtToIncomeChart,
+  InvestmentGrowthChart,
+  FundProgressChart,
+  AssetGrowthChart
+} from "@/components/dashboard/charts";
+import { 
+  calculateDashboardMetrics,
+  generateMonthlySpendingData,
+  generateLoanRepaymentData,
+  generateDebtToIncomeData,
+  generateInvestmentGrowthData,
+  generateFundProgressData,
+  generateAssetGrowthData,
+} from "@/lib/dashboard-calculations";
 import { useCurrency } from "@/contexts/currency-context";
 import { useState, useEffect } from "react";
 import { Investment, Income, Expense, Loan, Goal } from "@/types/financial";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 // Mock data for demonstration - in real app this would come from Firebase
 const mockData = {
@@ -149,10 +167,12 @@ export function DashboardContent() {
   const [dashboardMetrics, setDashboardMetrics] = useState(
     calculateDashboardMetrics([], [], [], [], [], 0)
   );
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Simulate loading data
     const loadData = async () => {
+      setIsLoading(true);
 
       // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -168,37 +188,149 @@ export function DashboardContent() {
       );
 
       setDashboardMetrics(metrics);
+      setIsLoading(false);
     };
 
     loadData();
   }, []);
 
+  // Generate chart data
+  const monthlySpendingData = generateMonthlySpendingData(dashboardMetrics.monthlyExpenses);
+  const loanRepaymentData = mockData.loans.length > 0 ? generateLoanRepaymentData(mockData.loans[0]) : [];
+  const debtToIncomeData = generateDebtToIncomeData(dashboardMetrics.totalDebt, dashboardMetrics.monthlyIncome);
+  const investmentGrowthData = generateInvestmentGrowthData(dashboardMetrics.portfolioValue);
+  const fundProgressData = generateFundProgressData(mockData.goals);
+  const assetGrowthData = generateAssetGrowthData();
+
+  // Chart props
+  const currentFunds = {
+    emergency: { 
+      current: mockData.goals.find(g => g.type === 'emergency_fund')?.currentAmount.amount || 8000, 
+      target: mockData.goals.find(g => g.type === 'emergency_fund')?.targetAmount.amount || 20000 
+    },
+    car: { 
+      current: 5000, 
+      target: 25000 
+    },
+    retirement: { 
+      current: mockData.goals.find(g => g.type === 'retirement')?.currentAmount.amount || 125000, 
+      target: mockData.goals.find(g => g.type === 'retirement')?.targetAmount.amount || 1000000 
+    },
+  };
+
+  const currentAssets = {
+    homes: 250000,
+    cars: 22000,
+    land: 105000,
+    total: 377000,
+  };
+
+  const appreciation = {
+    homes: 5.2,
+    cars: -12.5,
+    land: 3.8,
+    total: 2.1,
+  };
+
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
+    <div className="flex flex-1 flex-col gap-8 p-4 pt-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Financial Dashboard
           </h1>
           <p className="text-muted-foreground">
-            Get a comprehensive view of your financial health and progress
-            toward your goals.
+            Get a comprehensive view of your financial health and progress toward your goals.
           </p>
         </div>
       </div>
 
-      <DashboardCards metrics={dashboardMetrics} />
+      {/* Dashboard Cards */}
+      <DashboardCards metrics={dashboardMetrics} isLoading={isLoading} />
 
-      {/* Placeholder for future charts and visualizations */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="bg-muted/50 aspect-video rounded-xl flex items-center justify-center border border-border">
-          <p className="text-muted-foreground">Cash Flow Chart (Coming Soon)</p>
+      {/* Monthly Overview Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Monthly Overview</h2>
+          <p className="text-muted-foreground">Track your monthly spending and budget progress</p>
         </div>
-        <div className="bg-muted/50 aspect-video rounded-xl flex items-center justify-center border border-border">
-          <p className="text-muted-foreground">
-            Portfolio Allocation (Coming Soon)
-          </p>
+        
+        <MonthlySpendingChart 
+          data={monthlySpendingData} 
+          isLoading={isLoading}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Loans Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Loans & Debt Management</h2>
+          <p className="text-muted-foreground">Monitor your debt repayment progress and ratios</p>
         </div>
+        
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+          {mockData.loans.length > 0 && (
+            <LoanRepaymentChart
+              data={loanRepaymentData}
+              loanName={mockData.loans[0].name}
+              originalBalance={mockData.loans[0].principal.amount}
+              currentBalance={mockData.loans[0].currentBalance.amount}
+              monthsRemaining={36} // Mock data
+              isLoading={isLoading}
+            />
+          )}
+          
+          <DebtToIncomeChart
+            data={debtToIncomeData}
+            currentRatio={dashboardMetrics.debtToIncomeRatio}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Investment & Funds Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Investment & Funds</h2>
+          <p className="text-muted-foreground">Track investment growth and savings fund progress</p>
+        </div>
+        
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+          <InvestmentGrowthChart
+            data={investmentGrowthData}
+            currentValue={dashboardMetrics.portfolioValue}
+            averageGrowthRate={8.2} // Mock average growth rate
+            projectedValue={dashboardMetrics.portfolioValue * 1.17} // Mock projected value
+            isLoading={isLoading}
+          />
+          
+          <FundProgressChart
+            data={fundProgressData}
+            currentFunds={currentFunds}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Assets Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Assets</h2>
+          <p className="text-muted-foreground">Monitor the growth and depreciation of your physical assets</p>
+        </div>
+        
+        <AssetGrowthChart
+          data={assetGrowthData}
+          currentAssets={currentAssets}
+          appreciation={appreciation}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );

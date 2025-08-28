@@ -91,7 +91,9 @@ export class MarketDataService {
 
       const data = await response.json();
       if (process.env.NODE_ENV !== 'test') {
-        console.log(`Raw FinnHub data for ${symbol}:`, data);
+        // TODO : better logging
+        console.log(`Raw FinnHub data for ${symbol} fetched successfully.`);
+        // console.log(`Raw FinnHub data for ${symbol}:`, data);
       }
 
       // FinnHub returns 0 values for invalid symbols

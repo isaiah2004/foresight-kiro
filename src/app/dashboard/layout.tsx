@@ -119,7 +119,7 @@ export default function DashboardLayout({
     <SidebarProvider defaultOpen={defaultOpen} className="">
       <AppSidebar />
       <SidebarInset className="shadow-sm shadow-shadow ">
-        <header className="flex z-0 shrink-0 items-center gap-2 border-1 border-border rounded-lg mx-4 mt-4 mb-2 p-4 shadow-sm shadow-shadow ">
+        <header className="flex z-0 shrink-0 items-center gap-2 border-1 bg-card border-border/20 rounded-lg mx-4 mt-4 mb-2 p-4 shadow-md shadow-shadow ">
           <div className="flex items-center gap-2 px-0">
             <SidebarTrigger className="-ml-1" />
             <Separator
@@ -148,7 +148,7 @@ export default function DashboardLayout({
             </Breadcrumb>
           </div>
         </header>
-        <div className="py-8 px-8 mx-4 z-10 my-0 rounded-lg bg-background border-border border-1 shadow-sm shadow-shadow mb-4 relative overflow-hidden min-h-[500px]">
+        <div className="py-8 px-8 mx-4 z-10 my-0 rounded-lg bg-card border-border/20 border-1 shadow-md shadow-shadow mb-4 relative overflow-hidden min-h-[500px]">
           {/* Background image with opacity */}
           <div
             className="absolute inset-0 bg-cover bg-top bg-no-repeat  z-0 "
