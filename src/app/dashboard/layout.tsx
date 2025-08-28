@@ -18,6 +18,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { PageTransition } from "@/components/ui/animations";
 import { usePathname } from "next/navigation";
+import { generateBreadcrumbItems } from "@/lib/navigation-config";
 
 export default function DashboardLayout({
   children,
@@ -26,87 +27,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   
-  // Generate breadcrumb items based on current path
-  const generateBreadcrumbItems = (path: string) => {
-    const pathSegments = path.split('/').filter(Boolean);
-    const items = [];
-    
-    // Always start with dashboard
-    items.push({
-      title: "Financial Dashboard",
-      href: "/dashboard",
-      isPage: false,
-    });
-
-    // Route mapping for better titles
-    const routeMap: Record<string, string> = {
-      'dashboard': 'Overview',
-      'health': 'Financial Health',
-      'cash-flow': 'Cash Flow',
-      'investments': 'Portfolio',
-      'stocks': 'Stocks',
-      'bonds': 'Bonds',
-      'real-estate': 'Real Estate',
-      'crypto': 'Cryptocurrency',
-      'mutual-funds': 'Mutual Funds',
-      'etf': 'ETFs',
-      'options': 'Options',
-      'other': 'Other Investments',
-      'income-expenses': 'Income & Expenses',
-      'income': 'Income Sources',
-      'expenses': 'Expense Tracking',
-      'budget': 'Budget Planning',
-      'loans': 'All Loans',
-      'mortgage': 'Mortgage',
-      'auto': 'Auto Loans',
-      'personal': 'Personal Loans',
-      'payoff': 'Payoff Strategy',
-      'goals': 'All Goals',
-      'retirement': 'Retirement',
-      'education': 'Education',
-      'emergency': 'Emergency Fund',
-      'insights': 'AI Recommendations',
-      'risk': 'Risk Assessment',
-      'tax': 'Tax Optimization',
-      'settings': 'Settings',
-    };
-
-    if (pathSegments.length > 1) {
-      // If not just /dashboard, build nested breadcrumb
-      let currentPath = '';
-      
-      for (let i = 1; i < pathSegments.length; i++) {
-        const segment = pathSegments[i];
-        currentPath += `/${segment}`;
-        const fullPath = `/dashboard${currentPath}`;
-        
-        const isLastSegment = i === pathSegments.length - 1;
-        const title = routeMap[segment] || segment.charAt(0).toUpperCase() + segment.slice(1);
-        
-        if (isLastSegment) {
-          // Last segment is the current page
-          items.push({
-            title,
-            href: fullPath,
-            isPage: true,
-          });
-        } else {
-          // Intermediate segments are links
-          items.push({
-            title,
-            href: fullPath,
-            isPage: false,
-          });
-        }
-      }
-    } else {
-      // Just /dashboard - set Overview as current page
-      items[0].isPage = true;
-    }
-
-    return items;
-  };
-
+  // Use centralized breadcrumb configuration
   const breadcrumbItems = generateBreadcrumbItems(pathname);
   
   // Read sidebar state cookie on the client; default to true if not set
